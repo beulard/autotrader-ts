@@ -1,7 +1,10 @@
 import chalk from "chalk";
 import { Command, Option } from "commander";
+import dotenv from "dotenv";
 import { Algorithm, Explorer, Miner } from "./algorithms/algorithm";
-import { DefaultApi } from "./spacetraders-sdk/api";
+import { AgentsApi, Configuration } from "./spacetraders-sdk";
+
+dotenv.config()
 
 type AutotraderTypes = {
   [key: string]: Algorithm;
@@ -21,7 +24,7 @@ program
       .makeOptionMandatory()
   )
   .addOption(
-    new Option("-a --token", "Agent token").env("TOKEN").makeOptionMandatory()
+    new Option("-a --token <token>", "Agent token").env("TOKEN").makeOptionMandatory()
   );
 
 program.parse();
@@ -29,12 +32,12 @@ const options = program.opts();
 const algorithm = AUTOTRADER_TYPES[options.type as string] as Algorithm;
 
 // Get agent info
-// const config = new Configuration({ accessToken: options.token });
-const defaultApi = new DefaultApi();
-defaultApi.getStatus().then((res) => {
-  console.log(chalk.green(res.data));
+const config = new Configuration({ accessToken: options.token });
+const agentApi = new AgentsApi(config);
+agentApi.getMyAgent().then(res => {
+  console.log("Welcome, " + chalk.green(res.data.data.symbol));
+  console.log("Current credits: " + chalk.blueBright(res.data.data.credits));  
 
-  console.log(algorithm);
   console.log(
     "Executing " +
       chalk.blue(options.type) +
@@ -43,4 +46,6 @@ defaultApi.getStatus().then((res) => {
   );
 
   algorithm(options.ship);
+}).catch(err => {
+  console.log(chalk.red(err))
 });

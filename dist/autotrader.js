@@ -1442,12 +1442,12 @@ Expecting one of '${allowedValues.join("', '")}'`);
        *
        * @api private
        */
-      _optionEx(config, flags, description, fn, defaultValue) {
+      _optionEx(config2, flags, description, fn, defaultValue) {
         if (typeof flags === "object" && flags instanceof Option2) {
           throw new Error("To add an Option object use addOption() instead of option() or requiredOption()");
         }
         const option = this.createOption(flags, description);
-        option.makeOptionMandatory(!!config.mandatory);
+        option.makeOptionMandatory(!!config2.mandatory);
         if (typeof fn === "function") {
           option.default(defaultValue).argParser(fn);
         } else if (fn instanceof RegExp) {
@@ -2311,9 +2311,9 @@ Expecting one of '${allowedValues.join("', '")}'`);
           this._outputConfiguration.writeErr("\n");
           this.outputHelp({ error: true });
         }
-        const config = errorOptions || {};
-        const exitCode = config.exitCode || 1;
-        const code = config.code || "commander.error";
+        const config2 = errorOptions || {};
+        const exitCode = config2.exitCode || 1;
+        const code = config2.code || "commander.error";
         this._exit(exitCode, code, message);
       }
       /**
@@ -2817,6 +2817,299 @@ var require_commander = __commonJS({
     exports.InvalidArgumentError = InvalidArgumentError2;
     exports.InvalidOptionArgumentError = InvalidArgumentError2;
     exports.Option = Option2;
+  }
+});
+
+// node_modules/dotenv/package.json
+var require_package = __commonJS({
+  "node_modules/dotenv/package.json"(exports, module2) {
+    module2.exports = {
+      name: "dotenv",
+      version: "16.3.1",
+      description: "Loads environment variables from .env file",
+      main: "lib/main.js",
+      types: "lib/main.d.ts",
+      exports: {
+        ".": {
+          types: "./lib/main.d.ts",
+          require: "./lib/main.js",
+          default: "./lib/main.js"
+        },
+        "./config": "./config.js",
+        "./config.js": "./config.js",
+        "./lib/env-options": "./lib/env-options.js",
+        "./lib/env-options.js": "./lib/env-options.js",
+        "./lib/cli-options": "./lib/cli-options.js",
+        "./lib/cli-options.js": "./lib/cli-options.js",
+        "./package.json": "./package.json"
+      },
+      scripts: {
+        "dts-check": "tsc --project tests/types/tsconfig.json",
+        lint: "standard",
+        "lint-readme": "standard-markdown",
+        pretest: "npm run lint && npm run dts-check",
+        test: "tap tests/*.js --100 -Rspec",
+        prerelease: "npm test",
+        release: "standard-version"
+      },
+      repository: {
+        type: "git",
+        url: "git://github.com/motdotla/dotenv.git"
+      },
+      funding: "https://github.com/motdotla/dotenv?sponsor=1",
+      keywords: [
+        "dotenv",
+        "env",
+        ".env",
+        "environment",
+        "variables",
+        "config",
+        "settings"
+      ],
+      readmeFilename: "README.md",
+      license: "BSD-2-Clause",
+      devDependencies: {
+        "@definitelytyped/dtslint": "^0.0.133",
+        "@types/node": "^18.11.3",
+        decache: "^4.6.1",
+        sinon: "^14.0.1",
+        standard: "^17.0.0",
+        "standard-markdown": "^7.1.0",
+        "standard-version": "^9.5.0",
+        tap: "^16.3.0",
+        tar: "^6.1.11",
+        typescript: "^4.8.4"
+      },
+      engines: {
+        node: ">=12"
+      },
+      browser: {
+        fs: false
+      }
+    };
+  }
+});
+
+// node_modules/dotenv/lib/main.js
+var require_main = __commonJS({
+  "node_modules/dotenv/lib/main.js"(exports, module2) {
+    var fs = require("fs");
+    var path = require("path");
+    var os2 = require("os");
+    var crypto = require("crypto");
+    var packageJson = require_package();
+    var version = packageJson.version;
+    var LINE = /(?:^|^)\s*(?:export\s+)?([\w.-]+)(?:\s*=\s*?|:\s+?)(\s*'(?:\\'|[^'])*'|\s*"(?:\\"|[^"])*"|\s*`(?:\\`|[^`])*`|[^#\r\n]+)?\s*(?:#.*)?(?:$|$)/mg;
+    function parse(src) {
+      const obj = {};
+      let lines = src.toString();
+      lines = lines.replace(/\r\n?/mg, "\n");
+      let match;
+      while ((match = LINE.exec(lines)) != null) {
+        const key = match[1];
+        let value = match[2] || "";
+        value = value.trim();
+        const maybeQuote = value[0];
+        value = value.replace(/^(['"`])([\s\S]*)\1$/mg, "$2");
+        if (maybeQuote === '"') {
+          value = value.replace(/\\n/g, "\n");
+          value = value.replace(/\\r/g, "\r");
+        }
+        obj[key] = value;
+      }
+      return obj;
+    }
+    function _parseVault(options2) {
+      const vaultPath = _vaultPath(options2);
+      const result = DotenvModule.configDotenv({ path: vaultPath });
+      if (!result.parsed) {
+        throw new Error(`MISSING_DATA: Cannot parse ${vaultPath} for an unknown reason`);
+      }
+      const keys = _dotenvKey(options2).split(",");
+      const length = keys.length;
+      let decrypted;
+      for (let i = 0; i < length; i++) {
+        try {
+          const key = keys[i].trim();
+          const attrs = _instructions(result, key);
+          decrypted = DotenvModule.decrypt(attrs.ciphertext, attrs.key);
+          break;
+        } catch (error) {
+          if (i + 1 >= length) {
+            throw error;
+          }
+        }
+      }
+      return DotenvModule.parse(decrypted);
+    }
+    function _log(message) {
+      console.log(`[dotenv@${version}][INFO] ${message}`);
+    }
+    function _warn(message) {
+      console.log(`[dotenv@${version}][WARN] ${message}`);
+    }
+    function _debug(message) {
+      console.log(`[dotenv@${version}][DEBUG] ${message}`);
+    }
+    function _dotenvKey(options2) {
+      if (options2 && options2.DOTENV_KEY && options2.DOTENV_KEY.length > 0) {
+        return options2.DOTENV_KEY;
+      }
+      if (process.env.DOTENV_KEY && process.env.DOTENV_KEY.length > 0) {
+        return process.env.DOTENV_KEY;
+      }
+      return "";
+    }
+    function _instructions(result, dotenvKey) {
+      let uri;
+      try {
+        uri = new URL(dotenvKey);
+      } catch (error) {
+        if (error.code === "ERR_INVALID_URL") {
+          throw new Error("INVALID_DOTENV_KEY: Wrong format. Must be in valid uri format like dotenv://:key_1234@dotenv.org/vault/.env.vault?environment=development");
+        }
+        throw error;
+      }
+      const key = uri.password;
+      if (!key) {
+        throw new Error("INVALID_DOTENV_KEY: Missing key part");
+      }
+      const environment = uri.searchParams.get("environment");
+      if (!environment) {
+        throw new Error("INVALID_DOTENV_KEY: Missing environment part");
+      }
+      const environmentKey = `DOTENV_VAULT_${environment.toUpperCase()}`;
+      const ciphertext = result.parsed[environmentKey];
+      if (!ciphertext) {
+        throw new Error(`NOT_FOUND_DOTENV_ENVIRONMENT: Cannot locate environment ${environmentKey} in your .env.vault file.`);
+      }
+      return { ciphertext, key };
+    }
+    function _vaultPath(options2) {
+      let dotenvPath = path.resolve(process.cwd(), ".env");
+      if (options2 && options2.path && options2.path.length > 0) {
+        dotenvPath = options2.path;
+      }
+      return dotenvPath.endsWith(".vault") ? dotenvPath : `${dotenvPath}.vault`;
+    }
+    function _resolveHome(envPath) {
+      return envPath[0] === "~" ? path.join(os2.homedir(), envPath.slice(1)) : envPath;
+    }
+    function _configVault(options2) {
+      _log("Loading env from encrypted .env.vault");
+      const parsed = DotenvModule._parseVault(options2);
+      let processEnv = process.env;
+      if (options2 && options2.processEnv != null) {
+        processEnv = options2.processEnv;
+      }
+      DotenvModule.populate(processEnv, parsed, options2);
+      return { parsed };
+    }
+    function configDotenv(options2) {
+      let dotenvPath = path.resolve(process.cwd(), ".env");
+      let encoding = "utf8";
+      const debug = Boolean(options2 && options2.debug);
+      if (options2) {
+        if (options2.path != null) {
+          dotenvPath = _resolveHome(options2.path);
+        }
+        if (options2.encoding != null) {
+          encoding = options2.encoding;
+        }
+      }
+      try {
+        const parsed = DotenvModule.parse(fs.readFileSync(dotenvPath, { encoding }));
+        let processEnv = process.env;
+        if (options2 && options2.processEnv != null) {
+          processEnv = options2.processEnv;
+        }
+        DotenvModule.populate(processEnv, parsed, options2);
+        return { parsed };
+      } catch (e) {
+        if (debug) {
+          _debug(`Failed to load ${dotenvPath} ${e.message}`);
+        }
+        return { error: e };
+      }
+    }
+    function config2(options2) {
+      const vaultPath = _vaultPath(options2);
+      if (_dotenvKey(options2).length === 0) {
+        return DotenvModule.configDotenv(options2);
+      }
+      if (!fs.existsSync(vaultPath)) {
+        _warn(`You set DOTENV_KEY but you are missing a .env.vault file at ${vaultPath}. Did you forget to build it?`);
+        return DotenvModule.configDotenv(options2);
+      }
+      return DotenvModule._configVault(options2);
+    }
+    function decrypt(encrypted, keyStr) {
+      const key = Buffer.from(keyStr.slice(-64), "hex");
+      let ciphertext = Buffer.from(encrypted, "base64");
+      const nonce = ciphertext.slice(0, 12);
+      const authTag = ciphertext.slice(-16);
+      ciphertext = ciphertext.slice(12, -16);
+      try {
+        const aesgcm = crypto.createDecipheriv("aes-256-gcm", key, nonce);
+        aesgcm.setAuthTag(authTag);
+        return `${aesgcm.update(ciphertext)}${aesgcm.final()}`;
+      } catch (error) {
+        const isRange = error instanceof RangeError;
+        const invalidKeyLength = error.message === "Invalid key length";
+        const decryptionFailed = error.message === "Unsupported state or unable to authenticate data";
+        if (isRange || invalidKeyLength) {
+          const msg = "INVALID_DOTENV_KEY: It must be 64 characters long (or more)";
+          throw new Error(msg);
+        } else if (decryptionFailed) {
+          const msg = "DECRYPTION_FAILED: Please check your DOTENV_KEY";
+          throw new Error(msg);
+        } else {
+          console.error("Error: ", error.code);
+          console.error("Error: ", error.message);
+          throw error;
+        }
+      }
+    }
+    function populate(processEnv, parsed, options2 = {}) {
+      const debug = Boolean(options2 && options2.debug);
+      const override = Boolean(options2 && options2.override);
+      if (typeof parsed !== "object") {
+        throw new Error("OBJECT_REQUIRED: Please check the processEnv argument being passed to populate");
+      }
+      for (const key of Object.keys(parsed)) {
+        if (Object.prototype.hasOwnProperty.call(processEnv, key)) {
+          if (override === true) {
+            processEnv[key] = parsed[key];
+          }
+          if (debug) {
+            if (override === true) {
+              _debug(`"${key}" is already defined and WAS overwritten`);
+            } else {
+              _debug(`"${key}" is already defined and was NOT overwritten`);
+            }
+          }
+        } else {
+          processEnv[key] = parsed[key];
+        }
+      }
+    }
+    var DotenvModule = {
+      configDotenv,
+      _configVault,
+      _parseVault,
+      config: config2,
+      decrypt,
+      parse,
+      populate
+    };
+    module2.exports.configDotenv = DotenvModule.configDotenv;
+    module2.exports._configVault = DotenvModule._configVault;
+    module2.exports._parseVault = DotenvModule._parseVault;
+    module2.exports.config = DotenvModule.config;
+    module2.exports.decrypt = DotenvModule.decrypt;
+    module2.exports.parse = DotenvModule.parse;
+    module2.exports.populate = DotenvModule.populate;
+    module2.exports = DotenvModule;
   }
 });
 
@@ -13286,6 +13579,9 @@ var {
   Help
 } = import_index.default;
 
+// src/index.ts
+var import_dotenv = __toESM(require_main());
+
 // src/algorithms/miner.ts
 var Miner = (ship) => {
   console.log(`Hi ${ship} from miner`);
@@ -13664,7 +13960,7 @@ var utils_default = {
 };
 
 // node_modules/axios/lib/core/AxiosError.js
-function AxiosError(message, code, config, request, response) {
+function AxiosError(message, code, config2, request, response) {
   Error.call(this);
   if (Error.captureStackTrace) {
     Error.captureStackTrace(this, this.constructor);
@@ -13674,7 +13970,7 @@ function AxiosError(message, code, config, request, response) {
   this.message = message;
   this.name = "AxiosError";
   code && (this.code = code);
-  config && (this.config = config);
+  config2 && (this.config = config2);
   request && (this.request = request);
   response && (this.response = response);
 }
@@ -13720,14 +14016,14 @@ var descriptors = {};
 });
 Object.defineProperties(AxiosError, descriptors);
 Object.defineProperty(prototype, "isAxiosError", { value: true });
-AxiosError.from = (error, code, config, request, response, customProps) => {
+AxiosError.from = (error, code, config2, request, response, customProps) => {
   const axiosError = Object.create(prototype);
   utils_default.toFlatObject(error, axiosError, function filter2(obj) {
     return obj !== Error.prototype;
   }, (prop) => {
     return prop !== "isAxiosError";
   });
-  AxiosError.call(axiosError, error.message, code, config, request, response);
+  AxiosError.call(axiosError, error.message, code, config2, request, response);
   axiosError.cause = error;
   axiosError.name = error.name;
   customProps && Object.assign(axiosError, customProps);
@@ -14435,12 +14731,12 @@ var AxiosHeaders_default = AxiosHeaders;
 
 // node_modules/axios/lib/core/transformData.js
 function transformData(fns, response) {
-  const config = this || defaults_default;
-  const context = response || config;
+  const config2 = this || defaults_default;
+  const context = response || config2;
   const headers = AxiosHeaders_default.from(context.headers);
   let data = context.data;
   utils_default.forEach(fns, function transform(fn) {
-    data = fn.call(config, data, headers.normalize(), response ? response.status : void 0);
+    data = fn.call(config2, data, headers.normalize(), response ? response.status : void 0);
   });
   headers.normalize();
   return data;
@@ -14452,8 +14748,8 @@ function isCancel(value) {
 }
 
 // node_modules/axios/lib/cancel/CanceledError.js
-function CanceledError(message, config, request) {
-  AxiosError_default.call(this, message == null ? "canceled" : message, AxiosError_default.ERR_CANCELED, config, request);
+function CanceledError(message, config2, request) {
+  AxiosError_default.call(this, message == null ? "canceled" : message, AxiosError_default.ERR_CANCELED, config2, request);
   this.name = "CanceledError";
 }
 utils_default.inherits(CanceledError, AxiosError_default, {
@@ -14975,11 +15271,11 @@ var wrapAsync = (asyncExecutor) => {
     asyncExecutor(_resolve, _reject, (onDoneHandler) => onDone = onDoneHandler).catch(_reject);
   });
 };
-var http_default = isHttpAdapterSupported && function httpAdapter(config) {
+var http_default = isHttpAdapterSupported && function httpAdapter(config2) {
   return wrapAsync(async function dispatchHttpRequest(resolve, reject, onDone) {
-    let { data, lookup, family } = config;
-    const { responseType, responseEncoding } = config;
-    const method = config.method.toUpperCase();
+    let { data, lookup, family } = config2;
+    const { responseType, responseEncoding } = config2;
+    const method = config2.method.toUpperCase();
     let isDone;
     let rejected = false;
     let req;
@@ -14995,11 +15291,11 @@ var http_default = isHttpAdapterSupported && function httpAdapter(config) {
     }
     const emitter = new import_events.default();
     const onFinished = () => {
-      if (config.cancelToken) {
-        config.cancelToken.unsubscribe(abort);
+      if (config2.cancelToken) {
+        config2.cancelToken.unsubscribe(abort);
       }
-      if (config.signal) {
-        config.signal.removeEventListener("abort", abort);
+      if (config2.signal) {
+        config2.signal.removeEventListener("abort", abort);
       }
       emitter.removeAllListeners();
     };
@@ -15011,16 +15307,16 @@ var http_default = isHttpAdapterSupported && function httpAdapter(config) {
       }
     });
     function abort(reason) {
-      emitter.emit("abort", !reason || reason.type ? new CanceledError_default(null, config, req) : reason);
+      emitter.emit("abort", !reason || reason.type ? new CanceledError_default(null, config2, req) : reason);
     }
     emitter.once("abort", reject);
-    if (config.cancelToken || config.signal) {
-      config.cancelToken && config.cancelToken.subscribe(abort);
-      if (config.signal) {
-        config.signal.aborted ? abort() : config.signal.addEventListener("abort", abort);
+    if (config2.cancelToken || config2.signal) {
+      config2.cancelToken && config2.cancelToken.subscribe(abort);
+      if (config2.signal) {
+        config2.signal.aborted ? abort() : config2.signal.addEventListener("abort", abort);
       }
     }
-    const fullPath = buildFullPath(config.baseURL, config.url);
+    const fullPath = buildFullPath(config2.baseURL, config2.url);
     const parsed = new URL(fullPath, "http://localhost");
     const protocol = parsed.protocol || supportedProtocols[0];
     if (protocol === "data:") {
@@ -15030,15 +15326,15 @@ var http_default = isHttpAdapterSupported && function httpAdapter(config) {
           status: 405,
           statusText: "method not allowed",
           headers: {},
-          config
+          config: config2
         });
       }
       try {
-        convertedData = fromDataURI(config.url, responseType === "blob", {
-          Blob: config.env && config.env.Blob
+        convertedData = fromDataURI(config2.url, responseType === "blob", {
+          Blob: config2.env && config2.env.Blob
         });
       } catch (err) {
-        throw AxiosError_default.from(err, AxiosError_default.ERR_BAD_REQUEST, config);
+        throw AxiosError_default.from(err, AxiosError_default.ERR_BAD_REQUEST, config2);
       }
       if (responseType === "text") {
         convertedData = convertedData.toString(responseEncoding);
@@ -15053,21 +15349,21 @@ var http_default = isHttpAdapterSupported && function httpAdapter(config) {
         status: 200,
         statusText: "OK",
         headers: new AxiosHeaders_default(),
-        config
+        config: config2
       });
     }
     if (supportedProtocols.indexOf(protocol) === -1) {
       return reject(new AxiosError_default(
         "Unsupported protocol " + protocol,
         AxiosError_default.ERR_BAD_REQUEST,
-        config
+        config2
       ));
     }
-    const headers = AxiosHeaders_default.from(config.headers).normalize();
+    const headers = AxiosHeaders_default.from(config2.headers).normalize();
     headers.set("User-Agent", "axios/" + VERSION, false);
-    const onDownloadProgress = config.onDownloadProgress;
-    const onUploadProgress = config.onUploadProgress;
-    const maxRate = config.maxRate;
+    const onDownloadProgress = config2.onDownloadProgress;
+    const onUploadProgress = config2.onUploadProgress;
+    const maxRate = config2.maxRate;
     let maxUploadRate = void 0;
     let maxDownloadRate = void 0;
     if (utils_default.isSpecCompliantForm(data)) {
@@ -15101,15 +15397,15 @@ var http_default = isHttpAdapterSupported && function httpAdapter(config) {
         return reject(new AxiosError_default(
           "Data after transformation must be a string, an ArrayBuffer, a Buffer, or a Stream",
           AxiosError_default.ERR_BAD_REQUEST,
-          config
+          config2
         ));
       }
       headers.setContentLength(data.length, false);
-      if (config.maxBodyLength > -1 && data.length > config.maxBodyLength) {
+      if (config2.maxBodyLength > -1 && data.length > config2.maxBodyLength) {
         return reject(new AxiosError_default(
           "Request body larger than maxBodyLength limit",
           AxiosError_default.ERR_BAD_REQUEST,
-          config
+          config2
         ));
       }
     }
@@ -15135,9 +15431,9 @@ var http_default = isHttpAdapterSupported && function httpAdapter(config) {
       });
     }
     let auth = void 0;
-    if (config.auth) {
-      const username = config.auth.username || "";
-      const password = config.auth.password || "";
+    if (config2.auth) {
+      const username = config2.auth.username || "";
+      const password = config2.auth.password || "";
       auth = username + ":" + password;
     }
     if (!auth && parsed.username) {
@@ -15150,13 +15446,13 @@ var http_default = isHttpAdapterSupported && function httpAdapter(config) {
     try {
       path = buildURL(
         parsed.pathname + parsed.search,
-        config.params,
-        config.paramsSerializer
+        config2.params,
+        config2.paramsSerializer
       ).replace(/^\?/, "");
     } catch (err) {
       const customErr = new Error(err.message);
-      customErr.config = config;
-      customErr.url = config.url;
+      customErr.config = config2;
+      customErr.url = config2.url;
       customErr.exists = true;
       return reject(customErr);
     }
@@ -15169,7 +15465,7 @@ var http_default = isHttpAdapterSupported && function httpAdapter(config) {
       path,
       method,
       headers: headers.toJSON(),
-      agents: { http: config.httpAgent, https: config.httpsAgent },
+      agents: { http: config2.httpAgent, https: config2.httpsAgent },
       auth,
       protocol,
       family,
@@ -15177,36 +15473,36 @@ var http_default = isHttpAdapterSupported && function httpAdapter(config) {
       beforeRedirect: dispatchBeforeRedirect,
       beforeRedirects: {}
     };
-    if (config.socketPath) {
-      options2.socketPath = config.socketPath;
+    if (config2.socketPath) {
+      options2.socketPath = config2.socketPath;
     } else {
       options2.hostname = parsed.hostname;
       options2.port = parsed.port;
-      setProxy(options2, config.proxy, protocol + "//" + parsed.hostname + (parsed.port ? ":" + parsed.port : "") + options2.path);
+      setProxy(options2, config2.proxy, protocol + "//" + parsed.hostname + (parsed.port ? ":" + parsed.port : "") + options2.path);
     }
     let transport;
     const isHttpsRequest = isHttps.test(options2.protocol);
-    options2.agent = isHttpsRequest ? config.httpsAgent : config.httpAgent;
-    if (config.transport) {
-      transport = config.transport;
-    } else if (config.maxRedirects === 0) {
+    options2.agent = isHttpsRequest ? config2.httpsAgent : config2.httpAgent;
+    if (config2.transport) {
+      transport = config2.transport;
+    } else if (config2.maxRedirects === 0) {
       transport = isHttpsRequest ? import_https.default : import_http.default;
     } else {
-      if (config.maxRedirects) {
-        options2.maxRedirects = config.maxRedirects;
+      if (config2.maxRedirects) {
+        options2.maxRedirects = config2.maxRedirects;
       }
-      if (config.beforeRedirect) {
-        options2.beforeRedirects.config = config.beforeRedirect;
+      if (config2.beforeRedirect) {
+        options2.beforeRedirects.config = config2.beforeRedirect;
       }
       transport = isHttpsRequest ? httpsFollow : httpFollow;
     }
-    if (config.maxBodyLength > -1) {
-      options2.maxBodyLength = config.maxBodyLength;
+    if (config2.maxBodyLength > -1) {
+      options2.maxBodyLength = config2.maxBodyLength;
     } else {
       options2.maxBodyLength = Infinity;
     }
-    if (config.insecureHTTPParser) {
-      options2.insecureHTTPParser = config.insecureHTTPParser;
+    if (config2.insecureHTTPParser) {
+      options2.insecureHTTPParser = config2.insecureHTTPParser;
     }
     req = transport.request(options2, function handleResponse(res) {
       if (req.destroyed)
@@ -15227,7 +15523,7 @@ var http_default = isHttpAdapterSupported && function httpAdapter(config) {
       }
       let responseStream = res;
       const lastRequest = res.req || req;
-      if (config.decompress !== false && res.headers["content-encoding"]) {
+      if (config2.decompress !== false && res.headers["content-encoding"]) {
         if (method === "HEAD" || res.statusCode === 204) {
           delete res.headers["content-encoding"];
         }
@@ -15260,7 +15556,7 @@ var http_default = isHttpAdapterSupported && function httpAdapter(config) {
         status: res.statusCode,
         statusText: res.statusMessage,
         headers: new AxiosHeaders_default(res.headers),
-        config,
+        config: config2,
         request: lastRequest
       };
       if (responseType === "stream") {
@@ -15272,13 +15568,13 @@ var http_default = isHttpAdapterSupported && function httpAdapter(config) {
         responseStream.on("data", function handleStreamData(chunk) {
           responseBuffer.push(chunk);
           totalResponseBytes += chunk.length;
-          if (config.maxContentLength > -1 && totalResponseBytes > config.maxContentLength) {
+          if (config2.maxContentLength > -1 && totalResponseBytes > config2.maxContentLength) {
             rejected = true;
             responseStream.destroy();
             reject(new AxiosError_default(
-              "maxContentLength size of " + config.maxContentLength + " exceeded",
+              "maxContentLength size of " + config2.maxContentLength + " exceeded",
               AxiosError_default.ERR_BAD_RESPONSE,
-              config,
+              config2,
               lastRequest
             ));
           }
@@ -15288,9 +15584,9 @@ var http_default = isHttpAdapterSupported && function httpAdapter(config) {
             return;
           }
           const err = new AxiosError_default(
-            "maxContentLength size of " + config.maxContentLength + " exceeded",
+            "maxContentLength size of " + config2.maxContentLength + " exceeded",
             AxiosError_default.ERR_BAD_RESPONSE,
-            config,
+            config2,
             lastRequest
           );
           responseStream.destroy(err);
@@ -15299,7 +15595,7 @@ var http_default = isHttpAdapterSupported && function httpAdapter(config) {
         responseStream.on("error", function handleStreamError(err) {
           if (req.destroyed)
             return;
-          reject(AxiosError_default.from(err, null, config, lastRequest));
+          reject(AxiosError_default.from(err, null, config2, lastRequest));
         });
         responseStream.on("end", function handleStreamEnd() {
           try {
@@ -15312,7 +15608,7 @@ var http_default = isHttpAdapterSupported && function httpAdapter(config) {
             }
             response.data = responseData;
           } catch (err) {
-            reject(AxiosError_default.from(err, null, config, response.request, response));
+            reject(AxiosError_default.from(err, null, config2, response.request, response));
           }
           settle(resolve, reject, response);
         });
@@ -15329,18 +15625,18 @@ var http_default = isHttpAdapterSupported && function httpAdapter(config) {
       req.destroy(err);
     });
     req.on("error", function handleRequestError(err) {
-      reject(AxiosError_default.from(err, null, config, req));
+      reject(AxiosError_default.from(err, null, config2, req));
     });
     req.on("socket", function handleRequestSocket(socket) {
       socket.setKeepAlive(true, 1e3 * 60);
     });
-    if (config.timeout) {
-      const timeout = parseInt(config.timeout, 10);
+    if (config2.timeout) {
+      const timeout = parseInt(config2.timeout, 10);
       if (isNaN(timeout)) {
         reject(new AxiosError_default(
           "error trying to parse `config.timeout` to int",
           AxiosError_default.ERR_BAD_OPTION_VALUE,
-          config,
+          config2,
           req
         ));
         return;
@@ -15348,15 +15644,15 @@ var http_default = isHttpAdapterSupported && function httpAdapter(config) {
       req.setTimeout(timeout, function handleRequestTimeout() {
         if (isDone)
           return;
-        let timeoutErrorMessage = config.timeout ? "timeout of " + config.timeout + "ms exceeded" : "timeout exceeded";
-        const transitional2 = config.transitional || transitional_default;
-        if (config.timeoutErrorMessage) {
-          timeoutErrorMessage = config.timeoutErrorMessage;
+        let timeoutErrorMessage = config2.timeout ? "timeout of " + config2.timeout + "ms exceeded" : "timeout exceeded";
+        const transitional2 = config2.transitional || transitional_default;
+        if (config2.timeoutErrorMessage) {
+          timeoutErrorMessage = config2.timeoutErrorMessage;
         }
         reject(new AxiosError_default(
           timeoutErrorMessage,
           transitional2.clarifyTimeoutError ? AxiosError_default.ETIMEDOUT : AxiosError_default.ECONNABORTED,
-          config,
+          config2,
           req
         ));
         abort();
@@ -15374,7 +15670,7 @@ var http_default = isHttpAdapterSupported && function httpAdapter(config) {
       });
       data.on("close", () => {
         if (!ended && !errored) {
-          abort(new CanceledError_default("Request stream has been aborted", config, req));
+          abort(new CanceledError_default("Request stream has been aborted", config2, req));
         }
       });
       data.pipe(req);
@@ -15496,18 +15792,18 @@ function progressEventReducer(listener, isDownloadStream) {
   };
 }
 var isXHRAdapterSupported = typeof XMLHttpRequest !== "undefined";
-var xhr_default = isXHRAdapterSupported && function(config) {
+var xhr_default = isXHRAdapterSupported && function(config2) {
   return new Promise(function dispatchXhrRequest(resolve, reject) {
-    let requestData = config.data;
-    const requestHeaders = AxiosHeaders_default.from(config.headers).normalize();
-    const responseType = config.responseType;
+    let requestData = config2.data;
+    const requestHeaders = AxiosHeaders_default.from(config2.headers).normalize();
+    const responseType = config2.responseType;
     let onCanceled;
     function done() {
-      if (config.cancelToken) {
-        config.cancelToken.unsubscribe(onCanceled);
+      if (config2.cancelToken) {
+        config2.cancelToken.unsubscribe(onCanceled);
       }
-      if (config.signal) {
-        config.signal.removeEventListener("abort", onCanceled);
+      if (config2.signal) {
+        config2.signal.removeEventListener("abort", onCanceled);
       }
     }
     if (utils_default.isFormData(requestData)) {
@@ -15518,14 +15814,14 @@ var xhr_default = isXHRAdapterSupported && function(config) {
       }
     }
     let request = new XMLHttpRequest();
-    if (config.auth) {
-      const username = config.auth.username || "";
-      const password = config.auth.password ? unescape(encodeURIComponent(config.auth.password)) : "";
+    if (config2.auth) {
+      const username = config2.auth.username || "";
+      const password = config2.auth.password ? unescape(encodeURIComponent(config2.auth.password)) : "";
       requestHeaders.set("Authorization", "Basic " + btoa(username + ":" + password));
     }
-    const fullPath = buildFullPath(config.baseURL, config.url);
-    request.open(config.method.toUpperCase(), buildURL(fullPath, config.params, config.paramsSerializer), true);
-    request.timeout = config.timeout;
+    const fullPath = buildFullPath(config2.baseURL, config2.url);
+    request.open(config2.method.toUpperCase(), buildURL(fullPath, config2.params, config2.paramsSerializer), true);
+    request.timeout = config2.timeout;
     function onloadend() {
       if (!request) {
         return;
@@ -15539,7 +15835,7 @@ var xhr_default = isXHRAdapterSupported && function(config) {
         status: request.status,
         statusText: request.statusText,
         headers: responseHeaders,
-        config,
+        config: config2,
         request
       };
       settle(function _resolve(value) {
@@ -15568,31 +15864,31 @@ var xhr_default = isXHRAdapterSupported && function(config) {
       if (!request) {
         return;
       }
-      reject(new AxiosError_default("Request aborted", AxiosError_default.ECONNABORTED, config, request));
+      reject(new AxiosError_default("Request aborted", AxiosError_default.ECONNABORTED, config2, request));
       request = null;
     };
     request.onerror = function handleError() {
-      reject(new AxiosError_default("Network Error", AxiosError_default.ERR_NETWORK, config, request));
+      reject(new AxiosError_default("Network Error", AxiosError_default.ERR_NETWORK, config2, request));
       request = null;
     };
     request.ontimeout = function handleTimeout() {
-      let timeoutErrorMessage = config.timeout ? "timeout of " + config.timeout + "ms exceeded" : "timeout exceeded";
-      const transitional2 = config.transitional || transitional_default;
-      if (config.timeoutErrorMessage) {
-        timeoutErrorMessage = config.timeoutErrorMessage;
+      let timeoutErrorMessage = config2.timeout ? "timeout of " + config2.timeout + "ms exceeded" : "timeout exceeded";
+      const transitional2 = config2.transitional || transitional_default;
+      if (config2.timeoutErrorMessage) {
+        timeoutErrorMessage = config2.timeoutErrorMessage;
       }
       reject(new AxiosError_default(
         timeoutErrorMessage,
         transitional2.clarifyTimeoutError ? AxiosError_default.ETIMEDOUT : AxiosError_default.ECONNABORTED,
-        config,
+        config2,
         request
       ));
       request = null;
     };
     if (node_default.isStandardBrowserEnv) {
-      const xsrfValue = (config.withCredentials || isURLSameOrigin_default(fullPath)) && config.xsrfCookieName && cookies_default.read(config.xsrfCookieName);
+      const xsrfValue = (config2.withCredentials || isURLSameOrigin_default(fullPath)) && config2.xsrfCookieName && cookies_default.read(config2.xsrfCookieName);
       if (xsrfValue) {
-        requestHeaders.set(config.xsrfHeaderName, xsrfValue);
+        requestHeaders.set(config2.xsrfHeaderName, xsrfValue);
       }
     }
     requestData === void 0 && requestHeaders.setContentType(null);
@@ -15601,35 +15897,35 @@ var xhr_default = isXHRAdapterSupported && function(config) {
         request.setRequestHeader(key, val);
       });
     }
-    if (!utils_default.isUndefined(config.withCredentials)) {
-      request.withCredentials = !!config.withCredentials;
+    if (!utils_default.isUndefined(config2.withCredentials)) {
+      request.withCredentials = !!config2.withCredentials;
     }
     if (responseType && responseType !== "json") {
-      request.responseType = config.responseType;
+      request.responseType = config2.responseType;
     }
-    if (typeof config.onDownloadProgress === "function") {
-      request.addEventListener("progress", progressEventReducer(config.onDownloadProgress, true));
+    if (typeof config2.onDownloadProgress === "function") {
+      request.addEventListener("progress", progressEventReducer(config2.onDownloadProgress, true));
     }
-    if (typeof config.onUploadProgress === "function" && request.upload) {
-      request.upload.addEventListener("progress", progressEventReducer(config.onUploadProgress));
+    if (typeof config2.onUploadProgress === "function" && request.upload) {
+      request.upload.addEventListener("progress", progressEventReducer(config2.onUploadProgress));
     }
-    if (config.cancelToken || config.signal) {
+    if (config2.cancelToken || config2.signal) {
       onCanceled = (cancel) => {
         if (!request) {
           return;
         }
-        reject(!cancel || cancel.type ? new CanceledError_default(null, config, request) : cancel);
+        reject(!cancel || cancel.type ? new CanceledError_default(null, config2, request) : cancel);
         request.abort();
         request = null;
       };
-      config.cancelToken && config.cancelToken.subscribe(onCanceled);
-      if (config.signal) {
-        config.signal.aborted ? onCanceled() : config.signal.addEventListener("abort", onCanceled);
+      config2.cancelToken && config2.cancelToken.subscribe(onCanceled);
+      if (config2.signal) {
+        config2.signal.aborted ? onCanceled() : config2.signal.addEventListener("abort", onCanceled);
       }
     }
     const protocol = parseProtocol(fullPath);
     if (protocol && node_default.protocols.indexOf(protocol) === -1) {
-      reject(new AxiosError_default("Unsupported protocol " + protocol + ":", AxiosError_default.ERR_BAD_REQUEST, config));
+      reject(new AxiosError_default("Unsupported protocol " + protocol + ":", AxiosError_default.ERR_BAD_REQUEST, config2));
       return;
     }
     request.send(requestData || null);
@@ -15682,41 +15978,41 @@ var adapters_default = {
 };
 
 // node_modules/axios/lib/core/dispatchRequest.js
-function throwIfCancellationRequested(config) {
-  if (config.cancelToken) {
-    config.cancelToken.throwIfRequested();
+function throwIfCancellationRequested(config2) {
+  if (config2.cancelToken) {
+    config2.cancelToken.throwIfRequested();
   }
-  if (config.signal && config.signal.aborted) {
-    throw new CanceledError_default(null, config);
+  if (config2.signal && config2.signal.aborted) {
+    throw new CanceledError_default(null, config2);
   }
 }
-function dispatchRequest(config) {
-  throwIfCancellationRequested(config);
-  config.headers = AxiosHeaders_default.from(config.headers);
-  config.data = transformData.call(
-    config,
-    config.transformRequest
+function dispatchRequest(config2) {
+  throwIfCancellationRequested(config2);
+  config2.headers = AxiosHeaders_default.from(config2.headers);
+  config2.data = transformData.call(
+    config2,
+    config2.transformRequest
   );
-  if (["post", "put", "patch"].indexOf(config.method) !== -1) {
-    config.headers.setContentType("application/x-www-form-urlencoded", false);
+  if (["post", "put", "patch"].indexOf(config2.method) !== -1) {
+    config2.headers.setContentType("application/x-www-form-urlencoded", false);
   }
-  const adapter = adapters_default.getAdapter(config.adapter || defaults_default.adapter);
-  return adapter(config).then(function onAdapterResolution(response) {
-    throwIfCancellationRequested(config);
+  const adapter = adapters_default.getAdapter(config2.adapter || defaults_default.adapter);
+  return adapter(config2).then(function onAdapterResolution(response) {
+    throwIfCancellationRequested(config2);
     response.data = transformData.call(
-      config,
-      config.transformResponse,
+      config2,
+      config2.transformResponse,
       response
     );
     response.headers = AxiosHeaders_default.from(response.headers);
     return response;
   }, function onAdapterRejection(reason) {
     if (!isCancel(reason)) {
-      throwIfCancellationRequested(config);
+      throwIfCancellationRequested(config2);
       if (reason && reason.response) {
         reason.response.data = transformData.call(
-          config,
-          config.transformResponse,
+          config2,
+          config2.transformResponse,
           reason.response
         );
         reason.response.headers = AxiosHeaders_default.from(reason.response.headers);
@@ -15730,7 +16026,7 @@ function dispatchRequest(config) {
 var headersToObject = (thing) => thing instanceof AxiosHeaders_default ? thing.toJSON() : thing;
 function mergeConfig(config1, config2) {
   config2 = config2 || {};
-  const config = {};
+  const config3 = {};
   function getMergedValue(target, source, caseless) {
     if (utils_default.isPlainObject(target) && utils_default.isPlainObject(source)) {
       return utils_default.merge.call({ caseless }, target, source);
@@ -15800,9 +16096,9 @@ function mergeConfig(config1, config2) {
   utils_default.forEach(Object.keys(Object.assign({}, config1, config2)), function computeConfigValue(prop) {
     const merge2 = mergeMap[prop] || mergeDeepProperties;
     const configValue = merge2(config1[prop], config2[prop], prop);
-    utils_default.isUndefined(configValue) && merge2 !== mergeDirectKeys || (config[prop] = configValue);
+    utils_default.isUndefined(configValue) && merge2 !== mergeDirectKeys || (config3[prop] = configValue);
   });
-  return config;
+  return config3;
 }
 
 // node_modules/axios/lib/helpers/validator.js
@@ -15881,15 +16177,15 @@ var Axios = class {
    *
    * @returns {Promise} The Promise to be fulfilled
    */
-  request(configOrUrl, config) {
+  request(configOrUrl, config2) {
     if (typeof configOrUrl === "string") {
-      config = config || {};
-      config.url = configOrUrl;
+      config2 = config2 || {};
+      config2.url = configOrUrl;
     } else {
-      config = configOrUrl || {};
+      config2 = configOrUrl || {};
     }
-    config = mergeConfig(this.defaults, config);
-    const { transitional: transitional2, paramsSerializer, headers } = config;
+    config2 = mergeConfig(this.defaults, config2);
+    const { transitional: transitional2, paramsSerializer, headers } = config2;
     if (transitional2 !== void 0) {
       validator_default.assertOptions(transitional2, {
         silentJSONParsing: validators2.transitional(validators2.boolean),
@@ -15899,7 +16195,7 @@ var Axios = class {
     }
     if (paramsSerializer != null) {
       if (utils_default.isFunction(paramsSerializer)) {
-        config.paramsSerializer = {
+        config2.paramsSerializer = {
           serialize: paramsSerializer
         };
       } else {
@@ -15909,11 +16205,11 @@ var Axios = class {
         }, true);
       }
     }
-    config.method = (config.method || this.defaults.method || "get").toLowerCase();
+    config2.method = (config2.method || this.defaults.method || "get").toLowerCase();
     let contextHeaders;
     contextHeaders = headers && utils_default.merge(
       headers.common,
-      headers[config.method]
+      headers[config2.method]
     );
     contextHeaders && utils_default.forEach(
       ["delete", "get", "head", "post", "put", "patch", "common"],
@@ -15921,11 +16217,11 @@ var Axios = class {
         delete headers[method];
       }
     );
-    config.headers = AxiosHeaders_default.concat(contextHeaders, headers);
+    config2.headers = AxiosHeaders_default.concat(contextHeaders, headers);
     const requestInterceptorChain = [];
     let synchronousRequestInterceptors = true;
     this.interceptors.request.forEach(function unshiftRequestInterceptors(interceptor) {
-      if (typeof interceptor.runWhen === "function" && interceptor.runWhen(config) === false) {
+      if (typeof interceptor.runWhen === "function" && interceptor.runWhen(config2) === false) {
         return;
       }
       synchronousRequestInterceptors = synchronousRequestInterceptors && interceptor.synchronous;
@@ -15943,14 +16239,14 @@ var Axios = class {
       chain.unshift.apply(chain, requestInterceptorChain);
       chain.push.apply(chain, responseInterceptorChain);
       len = chain.length;
-      promise = Promise.resolve(config);
+      promise = Promise.resolve(config2);
       while (i < len) {
         promise = promise.then(chain[i++], chain[i++]);
       }
       return promise;
     }
     len = requestInterceptorChain.length;
-    let newConfig = config;
+    let newConfig = config2;
     i = 0;
     while (i < len) {
       const onFulfilled = requestInterceptorChain[i++];
@@ -15974,25 +16270,25 @@ var Axios = class {
     }
     return promise;
   }
-  getUri(config) {
-    config = mergeConfig(this.defaults, config);
-    const fullPath = buildFullPath(config.baseURL, config.url);
-    return buildURL(fullPath, config.params, config.paramsSerializer);
+  getUri(config2) {
+    config2 = mergeConfig(this.defaults, config2);
+    const fullPath = buildFullPath(config2.baseURL, config2.url);
+    return buildURL(fullPath, config2.params, config2.paramsSerializer);
   }
 };
 utils_default.forEach(["delete", "get", "head", "options"], function forEachMethodNoData2(method) {
-  Axios.prototype[method] = function(url2, config) {
-    return this.request(mergeConfig(config || {}, {
+  Axios.prototype[method] = function(url2, config2) {
+    return this.request(mergeConfig(config2 || {}, {
       method,
       url: url2,
-      data: (config || {}).data
+      data: (config2 || {}).data
     }));
   };
 });
 utils_default.forEach(["post", "put", "patch"], function forEachMethodWithData2(method) {
   function generateHTTPMethod(isForm) {
-    return function httpMethod(url2, data, config) {
-      return this.request(mergeConfig(config || {}, {
+    return function httpMethod(url2, data, config2) {
+      return this.request(mergeConfig(config2 || {}, {
         method,
         headers: isForm ? {
           "Content-Type": "multipart/form-data"
@@ -16038,11 +16334,11 @@ var CancelToken = class _CancelToken {
       };
       return promise;
     };
-    executor(function cancel(message, config, request) {
+    executor(function cancel(message, config2, request) {
       if (token.reason) {
         return;
       }
-      token.reason = new CanceledError_default(message, config, request);
+      token.reason = new CanceledError_default(message, config2, request);
       resolvePromise(token.reason);
     });
   }
@@ -16247,6 +16543,12 @@ var BaseAPI = class {
 
 // src/spacetraders-sdk/common.ts
 var DUMMY_BASE_URL = "https://example.com";
+var setBearerAuthToObject = async function(object, configuration) {
+  if (configuration && configuration.accessToken) {
+    const accessToken = typeof configuration.accessToken === "function" ? await configuration.accessToken() : await configuration.accessToken;
+    object["Authorization"] = "Bearer " + accessToken;
+  }
+};
 function setFlattenedQueryParams(urlSearchParams, parameter, key = "") {
   if (parameter == null)
     return;
@@ -16271,11 +16573,6 @@ var setSearchParams = function(url2, ...objects) {
   setFlattenedQueryParams(searchParams, objects);
   url2.search = searchParams.toString();
 };
-var serializeDataIfNeeded = function(value, requestOptions, configuration) {
-  const nonString = typeof value !== "string";
-  const needsSerialization = nonString && configuration && configuration.isJsonMime ? configuration.isJsonMime(requestOptions.headers["Content-Type"]) : nonString;
-  return needsSerialization ? JSON.stringify(value !== void 0 ? value : {}) : value || "";
-};
 var toPathString = function(url2) {
   return url2.pathname + url2.search + url2.hash;
 };
@@ -16287,16 +16584,16 @@ var createRequestFunction = function(axiosArgs, globalAxios, BASE_PATH2, configu
 };
 
 // src/spacetraders-sdk/api.ts
-var DefaultApiAxiosParamCreator = function(configuration) {
+var AgentsApiAxiosParamCreator = function(configuration) {
   return {
     /**
-     * Return the status of the game server.
-     * @summary Get Status
+     * Fetch your agent\'s details.
+     * @summary My Agent Details
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    getStatus: async (options2 = {}) => {
-      const localVarPath = `/`;
+    getMyAgent: async (options2 = {}) => {
+      const localVarPath = `/my/agent`;
       const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
       let baseOptions;
       if (configuration) {
@@ -16305,36 +16602,10 @@ var DefaultApiAxiosParamCreator = function(configuration) {
       const localVarRequestOptions = { method: "GET", ...baseOptions, ...options2 };
       const localVarHeaderParameter = {};
       const localVarQueryParameter = {};
+      await setBearerAuthToObject(localVarHeaderParameter, configuration);
       setSearchParams(localVarUrlObj, localVarQueryParameter);
       let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
       localVarRequestOptions.headers = { ...localVarHeaderParameter, ...headersFromBaseOptions, ...options2.headers };
-      return {
-        url: toPathString(localVarUrlObj),
-        options: localVarRequestOptions
-      };
-    },
-    /**
-     * Creates a new agent and ties it to a temporary Account.  The agent symbol is a 3-14 character string that will represent your agent. This symbol will prefix the symbol of every ship you own. Agent symbols will be cast to all uppercase characters.  A new agent will be granted an authorization token, a contract with their starting faction, a command ship with a jump drive, and one hundred thousand credits.  > #### Keep your token safe and secure > > Save your token during the alpha phase. There is no way to regenerate this token without starting a new agent. In the future you will be able to generate and manage your tokens from the SpaceTraders website.  You can accept your contract using the `/my/contracts/{contractId}/accept` endpoint. You will want to navigate your command ship to a nearby asteroid field and execute the `/my/ships/{shipSymbol}/extract` endpoint to mine various types of ores and minerals.  Return to the contract destination and execute the `/my/ships/{shipSymbol}/deliver` endpoint to deposit goods into the contract.  When your contract is fulfilled, you can call `/my/contracts/{contractId}/fulfill` to retrieve payment.
-     * @summary Register New Agent
-     * @param {RegisterRequest} [registerRequest] 
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    register: async (registerRequest, options2 = {}) => {
-      const localVarPath = `/register`;
-      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-      let baseOptions;
-      if (configuration) {
-        baseOptions = configuration.baseOptions;
-      }
-      const localVarRequestOptions = { method: "POST", ...baseOptions, ...options2 };
-      const localVarHeaderParameter = {};
-      const localVarQueryParameter = {};
-      localVarHeaderParameter["Content-Type"] = "application/json";
-      setSearchParams(localVarUrlObj, localVarQueryParameter);
-      let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-      localVarRequestOptions.headers = { ...localVarHeaderParameter, ...headersFromBaseOptions, ...options2.headers };
-      localVarRequestOptions.data = serializeDataIfNeeded(registerRequest, localVarRequestOptions, configuration);
       return {
         url: toPathString(localVarUrlObj),
         options: localVarRequestOptions
@@ -16342,57 +16613,112 @@ var DefaultApiAxiosParamCreator = function(configuration) {
     }
   };
 };
-var DefaultApiFp = function(configuration) {
-  const localVarAxiosParamCreator = DefaultApiAxiosParamCreator(configuration);
+var AgentsApiFp = function(configuration) {
+  const localVarAxiosParamCreator = AgentsApiAxiosParamCreator(configuration);
   return {
     /**
-     * Return the status of the game server.
-     * @summary Get Status
+     * Fetch your agent\'s details.
+     * @summary My Agent Details
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    async getStatus(options2) {
-      const localVarAxiosArgs = await localVarAxiosParamCreator.getStatus(options2);
-      return createRequestFunction(localVarAxiosArgs, axios_default, BASE_PATH, configuration);
-    },
-    /**
-     * Creates a new agent and ties it to a temporary Account.  The agent symbol is a 3-14 character string that will represent your agent. This symbol will prefix the symbol of every ship you own. Agent symbols will be cast to all uppercase characters.  A new agent will be granted an authorization token, a contract with their starting faction, a command ship with a jump drive, and one hundred thousand credits.  > #### Keep your token safe and secure > > Save your token during the alpha phase. There is no way to regenerate this token without starting a new agent. In the future you will be able to generate and manage your tokens from the SpaceTraders website.  You can accept your contract using the `/my/contracts/{contractId}/accept` endpoint. You will want to navigate your command ship to a nearby asteroid field and execute the `/my/ships/{shipSymbol}/extract` endpoint to mine various types of ores and minerals.  Return to the contract destination and execute the `/my/ships/{shipSymbol}/deliver` endpoint to deposit goods into the contract.  When your contract is fulfilled, you can call `/my/contracts/{contractId}/fulfill` to retrieve payment.
-     * @summary Register New Agent
-     * @param {RegisterRequest} [registerRequest] 
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    async register(registerRequest, options2) {
-      const localVarAxiosArgs = await localVarAxiosParamCreator.register(registerRequest, options2);
+    async getMyAgent(options2) {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.getMyAgent(options2);
       return createRequestFunction(localVarAxiosArgs, axios_default, BASE_PATH, configuration);
     }
   };
 };
-var DefaultApi = class extends BaseAPI {
+var AgentsApi = class extends BaseAPI {
   /**
-   * Return the status of the game server.
-   * @summary Get Status
+   * Fetch your agent\'s details.
+   * @summary My Agent Details
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
-   * @memberof DefaultApi
+   * @memberof AgentsApi
    */
-  getStatus(options2) {
-    return DefaultApiFp(this.configuration).getStatus(options2).then((request) => request(this.axios, this.basePath));
+  getMyAgent(options2) {
+    return AgentsApiFp(this.configuration).getMyAgent(options2).then((request) => request(this.axios, this.basePath));
+  }
+};
+
+// src/spacetraders-sdk/configuration.ts
+var Configuration = class {
+  /**
+   * parameter for apiKey security
+   * @param name security name
+   * @memberof Configuration
+   */
+  apiKey;
+  /**
+   * parameter for basic security
+   *
+   * @type {string}
+   * @memberof Configuration
+   */
+  username;
+  /**
+   * parameter for basic security
+   *
+   * @type {string}
+   * @memberof Configuration
+   */
+  password;
+  /**
+   * parameter for oauth2 security
+   * @param name security name
+   * @param scopes oauth2 scope
+   * @memberof Configuration
+   */
+  accessToken;
+  /**
+   * override base path
+   *
+   * @type {string}
+   * @memberof Configuration
+   */
+  basePath;
+  /**
+   * base options for axios calls
+   *
+   * @type {any}
+   * @memberof Configuration
+   */
+  baseOptions;
+  /**
+   * The FormData constructor that will be used to create multipart form data
+   * requests. You can inject this here so that execution environments that
+   * do not support the FormData class can still run the generated client.
+   *
+   * @type {new () => FormData}
+   */
+  formDataCtor;
+  constructor(param = {}) {
+    this.apiKey = param.apiKey;
+    this.username = param.username;
+    this.password = param.password;
+    this.accessToken = param.accessToken;
+    this.basePath = param.basePath;
+    this.baseOptions = param.baseOptions;
+    this.formDataCtor = param.formDataCtor;
   }
   /**
-   * Creates a new agent and ties it to a temporary Account.  The agent symbol is a 3-14 character string that will represent your agent. This symbol will prefix the symbol of every ship you own. Agent symbols will be cast to all uppercase characters.  A new agent will be granted an authorization token, a contract with their starting faction, a command ship with a jump drive, and one hundred thousand credits.  > #### Keep your token safe and secure > > Save your token during the alpha phase. There is no way to regenerate this token without starting a new agent. In the future you will be able to generate and manage your tokens from the SpaceTraders website.  You can accept your contract using the `/my/contracts/{contractId}/accept` endpoint. You will want to navigate your command ship to a nearby asteroid field and execute the `/my/ships/{shipSymbol}/extract` endpoint to mine various types of ores and minerals.  Return to the contract destination and execute the `/my/ships/{shipSymbol}/deliver` endpoint to deposit goods into the contract.  When your contract is fulfilled, you can call `/my/contracts/{contractId}/fulfill` to retrieve payment.
-   * @summary Register New Agent
-   * @param {RegisterRequest} [registerRequest] 
-   * @param {*} [options] Override http request option.
-   * @throws {RequiredError}
-   * @memberof DefaultApi
+   * Check if the given MIME is a JSON MIME.
+   * JSON MIME examples:
+   *   application/json
+   *   application/json; charset=UTF8
+   *   APPLICATION/JSON
+   *   application/vnd.company+json
+   * @param mime - MIME (Multipurpose Internet Mail Extensions)
+   * @return True if the given MIME is JSON, false otherwise.
    */
-  register(registerRequest, options2) {
-    return DefaultApiFp(this.configuration).register(registerRequest, options2).then((request) => request(this.axios, this.basePath));
+  isJsonMime(mime) {
+    const jsonMime = new RegExp("^(application/json|[^;/ 	]+/[^;/ 	]+[+]json)[ 	]*(;.*)?$", "i");
+    return mime !== null && (jsonMime.test(mime) || mime.toLowerCase() === "application/json-patch+json");
   }
 };
 
 // src/index.ts
+import_dotenv.default.config();
 var AUTOTRADER_TYPES = {
   MINER: Miner,
   EXPLORER: Explorer
@@ -16401,19 +16727,22 @@ var program2 = new Command("autotrader-ts");
 program2.requiredOption("-s --ship <symbol>", "Ship symbol").addOption(
   new Option("-t --type <type>", "Type of AI").choices(Object.keys(AUTOTRADER_TYPES)).makeOptionMandatory()
 ).addOption(
-  new Option("-a --token", "Agent token").env("TOKEN").makeOptionMandatory()
+  new Option("-a --token <token>", "Agent token").env("TOKEN").makeOptionMandatory()
 );
 program2.parse();
 var options = program2.opts();
 var algorithm = AUTOTRADER_TYPES[options.type];
-var defaultApi = new DefaultApi();
-defaultApi.getStatus().then((res) => {
-  console.log(source_default.green(res.data));
-  console.log(algorithm);
+var config = new Configuration({ accessToken: options.token });
+var agentApi = new AgentsApi(config);
+agentApi.getMyAgent().then((res) => {
+  console.log("Welcome, " + source_default.green(res.data.data.symbol));
+  console.log("Current credits: " + source_default.blueBright(res.data.data.credits));
   console.log(
     "Executing " + source_default.blue(options.type) + " algorithm for ship " + source_default.green(options.ship)
   );
   algorithm(options.ship);
+}).catch((err) => {
+  console.log(source_default.red(err));
 });
 /*! Bundled license information:
 
