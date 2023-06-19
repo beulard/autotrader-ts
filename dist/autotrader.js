@@ -13582,16 +13582,35 @@ var {
 // src/index.ts
 var import_dotenv = __toESM(require_main());
 
-// src/algorithms/miner.ts
-var Miner = (ship) => {
-  console.log(`Hi ${ship} from miner`);
-  return 0;
+// src/algorithms/explorer.ts
+var Explorer = class {
+  async init(ship, fleet) {
+    console.log(`Hi ${ship} from explorer`);
+    return true;
+  }
+  async update() {
+  }
 };
 
-// src/algorithms/explorer.ts
-var Explorer = (ship) => {
-  console.log(`Hi ${ship} from explorer`);
-  return 0;
+// src/algorithms/miner.ts
+var Miner = class {
+  _symbol = "";
+  _fleetApi = null;
+  log(...message) {
+    const date = /* @__PURE__ */ new Date();
+    console.log(`[${source_default.gray(date.toISOString())}][${source_default.cyan(this._symbol)}]`, ...message);
+  }
+  async init(symbol, fleet) {
+    this._symbol = symbol;
+    this._fleetApi = fleet;
+    console.log("Miner init", symbol);
+    const ship = (await fleet.getMyShip(symbol)).data.data;
+    console.log(source_default.green("Init " + ship.symbol + " ok!"));
+    return true;
+  }
+  async update() {
+    this.log("Miner", this._symbol);
+  }
 };
 
 // node_modules/axios/lib/helpers/bind.js
@@ -16540,9 +16559,21 @@ var BaseAPI = class {
   }
   configuration;
 };
+var RequiredError = class extends Error {
+  constructor(field, msg) {
+    super(msg);
+    this.field = field;
+    this.name = "RequiredError";
+  }
+};
 
 // src/spacetraders-sdk/common.ts
 var DUMMY_BASE_URL = "https://example.com";
+var assertParamExists = function(functionName, paramName, paramValue) {
+  if (paramValue === null || paramValue === void 0) {
+    throw new RequiredError(paramName, `Required parameter ${paramName} was null or undefined when calling ${functionName}.`);
+  }
+};
 var setBearerAuthToObject = async function(object, configuration) {
   if (configuration && configuration.accessToken) {
     const accessToken = typeof configuration.accessToken === "function" ? await configuration.accessToken() : await configuration.accessToken;
@@ -16572,6 +16603,11 @@ var setSearchParams = function(url2, ...objects) {
   const searchParams = new URLSearchParams(url2.search);
   setFlattenedQueryParams(searchParams, objects);
   url2.search = searchParams.toString();
+};
+var serializeDataIfNeeded = function(value, requestOptions, configuration) {
+  const nonString = typeof value !== "string";
+  const needsSerialization = nonString && configuration && configuration.isJsonMime ? configuration.isJsonMime(requestOptions.headers["Content-Type"]) : nonString;
+  return needsSerialization ? JSON.stringify(value !== void 0 ? value : {}) : value || "";
 };
 var toPathString = function(url2) {
   return url2.pathname + url2.search + url2.hash;
@@ -16638,6 +16674,1463 @@ var AgentsApi = class extends BaseAPI {
    */
   getMyAgent(options2) {
     return AgentsApiFp(this.configuration).getMyAgent(options2).then((request) => request(this.axios, this.basePath));
+  }
+};
+var FleetApiAxiosParamCreator = function(configuration) {
+  return {
+    /**
+     * Command a ship to chart the current waypoint.  Waypoints in the universe are uncharted by default. These locations will not show up in the API until they have been charted by a ship.  Charting a location will record your agent as the one who created the chart.
+     * @summary Create Chart
+     * @param {string} shipSymbol The symbol of the ship
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    createChart: async (shipSymbol, options2 = {}) => {
+      assertParamExists("createChart", "shipSymbol", shipSymbol);
+      const localVarPath = `/my/ships/{shipSymbol}/chart`.replace(`{${"shipSymbol"}}`, encodeURIComponent(String(shipSymbol)));
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+      let baseOptions;
+      if (configuration) {
+        baseOptions = configuration.baseOptions;
+      }
+      const localVarRequestOptions = { method: "POST", ...baseOptions, ...options2 };
+      const localVarHeaderParameter = {};
+      const localVarQueryParameter = {};
+      await setBearerAuthToObject(localVarHeaderParameter, configuration);
+      setSearchParams(localVarUrlObj, localVarQueryParameter);
+      let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+      localVarRequestOptions.headers = { ...localVarHeaderParameter, ...headersFromBaseOptions, ...options2.headers };
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions
+      };
+    },
+    /**
+     * Activate your ship\'s sensor arrays to scan for ship information.
+     * @summary Scan Ships
+     * @param {string} shipSymbol 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    createShipShipScan: async (shipSymbol, options2 = {}) => {
+      assertParamExists("createShipShipScan", "shipSymbol", shipSymbol);
+      const localVarPath = `/my/ships/{shipSymbol}/scan/ships`.replace(`{${"shipSymbol"}}`, encodeURIComponent(String(shipSymbol)));
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+      let baseOptions;
+      if (configuration) {
+        baseOptions = configuration.baseOptions;
+      }
+      const localVarRequestOptions = { method: "POST", ...baseOptions, ...options2 };
+      const localVarHeaderParameter = {};
+      const localVarQueryParameter = {};
+      await setBearerAuthToObject(localVarHeaderParameter, configuration);
+      setSearchParams(localVarUrlObj, localVarQueryParameter);
+      let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+      localVarRequestOptions.headers = { ...localVarHeaderParameter, ...headersFromBaseOptions, ...options2.headers };
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions
+      };
+    },
+    /**
+     * Activate your ship\'s sensor arrays to scan for system information.
+     * @summary Scan Systems
+     * @param {string} shipSymbol 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    createShipSystemScan: async (shipSymbol, options2 = {}) => {
+      assertParamExists("createShipSystemScan", "shipSymbol", shipSymbol);
+      const localVarPath = `/my/ships/{shipSymbol}/scan/systems`.replace(`{${"shipSymbol"}}`, encodeURIComponent(String(shipSymbol)));
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+      let baseOptions;
+      if (configuration) {
+        baseOptions = configuration.baseOptions;
+      }
+      const localVarRequestOptions = { method: "POST", ...baseOptions, ...options2 };
+      const localVarHeaderParameter = {};
+      const localVarQueryParameter = {};
+      await setBearerAuthToObject(localVarHeaderParameter, configuration);
+      setSearchParams(localVarUrlObj, localVarQueryParameter);
+      let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+      localVarRequestOptions.headers = { ...localVarHeaderParameter, ...headersFromBaseOptions, ...options2.headers };
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions
+      };
+    },
+    /**
+     * Activate your ship\'s sensor arrays to scan for waypoint information.
+     * @summary Scan Waypoints
+     * @param {string} shipSymbol 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    createShipWaypointScan: async (shipSymbol, options2 = {}) => {
+      assertParamExists("createShipWaypointScan", "shipSymbol", shipSymbol);
+      const localVarPath = `/my/ships/{shipSymbol}/scan/waypoints`.replace(`{${"shipSymbol"}}`, encodeURIComponent(String(shipSymbol)));
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+      let baseOptions;
+      if (configuration) {
+        baseOptions = configuration.baseOptions;
+      }
+      const localVarRequestOptions = { method: "POST", ...baseOptions, ...options2 };
+      const localVarHeaderParameter = {};
+      const localVarQueryParameter = {};
+      await setBearerAuthToObject(localVarHeaderParameter, configuration);
+      setSearchParams(localVarUrlObj, localVarQueryParameter);
+      let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+      localVarRequestOptions.headers = { ...localVarHeaderParameter, ...headersFromBaseOptions, ...options2.headers };
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions
+      };
+    },
+    /**
+     * If you want to target specific yields for an extraction, you can survey a waypoint, such as an asteroid field, and send the survey in the body of the extract request. Each survey may have multiple deposits, and if a symbol shows up more than once, that indicates a higher chance of extracting that resource.  Your ship will enter a cooldown between consecutive survey requests. Surveys will eventually expire after a period of time. Multiple ships can use the same survey for extraction.
+     * @summary Create Survey
+     * @param {string} shipSymbol The symbol of the ship
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    createSurvey: async (shipSymbol, options2 = {}) => {
+      assertParamExists("createSurvey", "shipSymbol", shipSymbol);
+      const localVarPath = `/my/ships/{shipSymbol}/survey`.replace(`{${"shipSymbol"}}`, encodeURIComponent(String(shipSymbol)));
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+      let baseOptions;
+      if (configuration) {
+        baseOptions = configuration.baseOptions;
+      }
+      const localVarRequestOptions = { method: "POST", ...baseOptions, ...options2 };
+      const localVarHeaderParameter = {};
+      const localVarQueryParameter = {};
+      await setBearerAuthToObject(localVarHeaderParameter, configuration);
+      setSearchParams(localVarUrlObj, localVarQueryParameter);
+      let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+      localVarRequestOptions.headers = { ...localVarHeaderParameter, ...headersFromBaseOptions, ...options2.headers };
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions
+      };
+    },
+    /**
+     * Attempt to dock your ship at it\'s current location. Docking will only succeed if the waypoint is a dockable location, and your ship is capable of docking at the time of the request.  The endpoint is idempotent - successive calls will succeed even if the ship is already docked.
+     * @summary Dock Ship
+     * @param {string} shipSymbol The symbol of the ship
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    dockShip: async (shipSymbol, options2 = {}) => {
+      assertParamExists("dockShip", "shipSymbol", shipSymbol);
+      const localVarPath = `/my/ships/{shipSymbol}/dock`.replace(`{${"shipSymbol"}}`, encodeURIComponent(String(shipSymbol)));
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+      let baseOptions;
+      if (configuration) {
+        baseOptions = configuration.baseOptions;
+      }
+      const localVarRequestOptions = { method: "POST", ...baseOptions, ...options2 };
+      const localVarHeaderParameter = {};
+      const localVarQueryParameter = {};
+      await setBearerAuthToObject(localVarHeaderParameter, configuration);
+      setSearchParams(localVarUrlObj, localVarQueryParameter);
+      let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+      localVarRequestOptions.headers = { ...localVarHeaderParameter, ...headersFromBaseOptions, ...options2.headers };
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions
+      };
+    },
+    /**
+     * Extract resources from the waypoint into your ship. Send an optional survey as the payload to target specific yields.
+     * @summary Extract Resources
+     * @param {string} shipSymbol The ship symbol
+     * @param {ExtractResourcesRequest} [extractResourcesRequest] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    extractResources: async (shipSymbol, extractResourcesRequest, options2 = {}) => {
+      assertParamExists("extractResources", "shipSymbol", shipSymbol);
+      const localVarPath = `/my/ships/{shipSymbol}/extract`.replace(`{${"shipSymbol"}}`, encodeURIComponent(String(shipSymbol)));
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+      let baseOptions;
+      if (configuration) {
+        baseOptions = configuration.baseOptions;
+      }
+      const localVarRequestOptions = { method: "POST", ...baseOptions, ...options2 };
+      const localVarHeaderParameter = {};
+      const localVarQueryParameter = {};
+      await setBearerAuthToObject(localVarHeaderParameter, configuration);
+      localVarHeaderParameter["Content-Type"] = "application/json";
+      setSearchParams(localVarUrlObj, localVarQueryParameter);
+      let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+      localVarRequestOptions.headers = { ...localVarHeaderParameter, ...headersFromBaseOptions, ...options2.headers };
+      localVarRequestOptions.data = serializeDataIfNeeded(extractResourcesRequest, localVarRequestOptions, configuration);
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions
+      };
+    },
+    /**
+     * Get the mounts on a ship.
+     * @summary Get Mounts
+     * @param {string} shipSymbol 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    getMounts: async (shipSymbol, options2 = {}) => {
+      assertParamExists("getMounts", "shipSymbol", shipSymbol);
+      const localVarPath = `/my/ships/{shipSymbol}/mounts`.replace(`{${"shipSymbol"}}`, encodeURIComponent(String(shipSymbol)));
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+      let baseOptions;
+      if (configuration) {
+        baseOptions = configuration.baseOptions;
+      }
+      const localVarRequestOptions = { method: "GET", ...baseOptions, ...options2 };
+      const localVarHeaderParameter = {};
+      const localVarQueryParameter = {};
+      await setBearerAuthToObject(localVarHeaderParameter, configuration);
+      setSearchParams(localVarUrlObj, localVarQueryParameter);
+      let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+      localVarRequestOptions.headers = { ...localVarHeaderParameter, ...headersFromBaseOptions, ...options2.headers };
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions
+      };
+    },
+    /**
+     * Retrieve the details of your ship.
+     * @summary Get Ship
+     * @param {string} shipSymbol 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    getMyShip: async (shipSymbol, options2 = {}) => {
+      assertParamExists("getMyShip", "shipSymbol", shipSymbol);
+      const localVarPath = `/my/ships/{shipSymbol}`.replace(`{${"shipSymbol"}}`, encodeURIComponent(String(shipSymbol)));
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+      let baseOptions;
+      if (configuration) {
+        baseOptions = configuration.baseOptions;
+      }
+      const localVarRequestOptions = { method: "GET", ...baseOptions, ...options2 };
+      const localVarHeaderParameter = {};
+      const localVarQueryParameter = {};
+      await setBearerAuthToObject(localVarHeaderParameter, configuration);
+      setSearchParams(localVarUrlObj, localVarQueryParameter);
+      let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+      localVarRequestOptions.headers = { ...localVarHeaderParameter, ...headersFromBaseOptions, ...options2.headers };
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions
+      };
+    },
+    /**
+     * Retrieve the cargo of your ship.
+     * @summary Get Ship Cargo
+     * @param {string} shipSymbol The symbol of the ship
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    getMyShipCargo: async (shipSymbol, options2 = {}) => {
+      assertParamExists("getMyShipCargo", "shipSymbol", shipSymbol);
+      const localVarPath = `/my/ships/{shipSymbol}/cargo`.replace(`{${"shipSymbol"}}`, encodeURIComponent(String(shipSymbol)));
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+      let baseOptions;
+      if (configuration) {
+        baseOptions = configuration.baseOptions;
+      }
+      const localVarRequestOptions = { method: "GET", ...baseOptions, ...options2 };
+      const localVarHeaderParameter = {};
+      const localVarQueryParameter = {};
+      await setBearerAuthToObject(localVarHeaderParameter, configuration);
+      setSearchParams(localVarUrlObj, localVarQueryParameter);
+      let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+      localVarRequestOptions.headers = { ...localVarHeaderParameter, ...headersFromBaseOptions, ...options2.headers };
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions
+      };
+    },
+    /**
+     * Retrieve all of your ships.
+     * @summary List Ships
+     * @param {number} [page] What entry offset to request
+     * @param {number} [limit] How many entries to return per page
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    getMyShips: async (page, limit, options2 = {}) => {
+      const localVarPath = `/my/ships`;
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+      let baseOptions;
+      if (configuration) {
+        baseOptions = configuration.baseOptions;
+      }
+      const localVarRequestOptions = { method: "GET", ...baseOptions, ...options2 };
+      const localVarHeaderParameter = {};
+      const localVarQueryParameter = {};
+      await setBearerAuthToObject(localVarHeaderParameter, configuration);
+      if (page !== void 0) {
+        localVarQueryParameter["page"] = page;
+      }
+      if (limit !== void 0) {
+        localVarQueryParameter["limit"] = limit;
+      }
+      setSearchParams(localVarUrlObj, localVarQueryParameter);
+      let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+      localVarRequestOptions.headers = { ...localVarHeaderParameter, ...headersFromBaseOptions, ...options2.headers };
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions
+      };
+    },
+    /**
+     * Retrieve the details of your ship\'s reactor cooldown. Some actions such as activating your jump drive, scanning, or extracting resources taxes your reactor and results in a cooldown.  Your ship cannot perform additional actions until your cooldown has expired. The duration of your cooldown is relative to the power consumption of the related modules or mounts for the action taken.  Response returns a 204 status code (no-content) when the ship has no cooldown.
+     * @summary Get Ship Cooldown
+     * @param {string} shipSymbol 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    getShipCooldown: async (shipSymbol, options2 = {}) => {
+      assertParamExists("getShipCooldown", "shipSymbol", shipSymbol);
+      const localVarPath = `/my/ships/{shipSymbol}/cooldown`.replace(`{${"shipSymbol"}}`, encodeURIComponent(String(shipSymbol)));
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+      let baseOptions;
+      if (configuration) {
+        baseOptions = configuration.baseOptions;
+      }
+      const localVarRequestOptions = { method: "GET", ...baseOptions, ...options2 };
+      const localVarHeaderParameter = {};
+      const localVarQueryParameter = {};
+      await setBearerAuthToObject(localVarHeaderParameter, configuration);
+      setSearchParams(localVarUrlObj, localVarQueryParameter);
+      let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+      localVarRequestOptions.headers = { ...localVarHeaderParameter, ...headersFromBaseOptions, ...options2.headers };
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions
+      };
+    },
+    /**
+     * Get the current nav status of a ship.
+     * @summary Get Ship Nav
+     * @param {string} shipSymbol The ship symbol
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    getShipNav: async (shipSymbol, options2 = {}) => {
+      assertParamExists("getShipNav", "shipSymbol", shipSymbol);
+      const localVarPath = `/my/ships/{shipSymbol}/nav`.replace(`{${"shipSymbol"}}`, encodeURIComponent(String(shipSymbol)));
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+      let baseOptions;
+      if (configuration) {
+        baseOptions = configuration.baseOptions;
+      }
+      const localVarRequestOptions = { method: "GET", ...baseOptions, ...options2 };
+      const localVarHeaderParameter = {};
+      const localVarQueryParameter = {};
+      await setBearerAuthToObject(localVarHeaderParameter, configuration);
+      setSearchParams(localVarUrlObj, localVarQueryParameter);
+      let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+      localVarRequestOptions.headers = { ...localVarHeaderParameter, ...headersFromBaseOptions, ...options2.headers };
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions
+      };
+    },
+    /**
+     * Install a mount on a ship.
+     * @summary Install Mount
+     * @param {string} shipSymbol 
+     * @param {InstallMountRequest} [installMountRequest] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    installMount: async (shipSymbol, installMountRequest, options2 = {}) => {
+      assertParamExists("installMount", "shipSymbol", shipSymbol);
+      const localVarPath = `/my/ships/{shipSymbol}/mounts/install`.replace(`{${"shipSymbol"}}`, encodeURIComponent(String(shipSymbol)));
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+      let baseOptions;
+      if (configuration) {
+        baseOptions = configuration.baseOptions;
+      }
+      const localVarRequestOptions = { method: "POST", ...baseOptions, ...options2 };
+      const localVarHeaderParameter = {};
+      const localVarQueryParameter = {};
+      await setBearerAuthToObject(localVarHeaderParameter, configuration);
+      localVarHeaderParameter["Content-Type"] = "application/json";
+      setSearchParams(localVarUrlObj, localVarQueryParameter);
+      let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+      localVarRequestOptions.headers = { ...localVarHeaderParameter, ...headersFromBaseOptions, ...options2.headers };
+      localVarRequestOptions.data = serializeDataIfNeeded(installMountRequest, localVarRequestOptions, configuration);
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions
+      };
+    },
+    /**
+     * Jettison cargo from your ship\'s cargo hold.
+     * @summary Jettison Cargo
+     * @param {string} shipSymbol 
+     * @param {JettisonRequest} [jettisonRequest] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    jettison: async (shipSymbol, jettisonRequest, options2 = {}) => {
+      assertParamExists("jettison", "shipSymbol", shipSymbol);
+      const localVarPath = `/my/ships/{shipSymbol}/jettison`.replace(`{${"shipSymbol"}}`, encodeURIComponent(String(shipSymbol)));
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+      let baseOptions;
+      if (configuration) {
+        baseOptions = configuration.baseOptions;
+      }
+      const localVarRequestOptions = { method: "POST", ...baseOptions, ...options2 };
+      const localVarHeaderParameter = {};
+      const localVarQueryParameter = {};
+      await setBearerAuthToObject(localVarHeaderParameter, configuration);
+      localVarHeaderParameter["Content-Type"] = "application/json";
+      setSearchParams(localVarUrlObj, localVarQueryParameter);
+      let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+      localVarRequestOptions.headers = { ...localVarHeaderParameter, ...headersFromBaseOptions, ...options2.headers };
+      localVarRequestOptions.data = serializeDataIfNeeded(jettisonRequest, localVarRequestOptions, configuration);
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions
+      };
+    },
+    /**
+     * Jump your ship instantly to a target system. When used while in orbit or docked to a jump gate waypoint, any ship can use this command. When used elsewhere, jumping requires a jump drive unit and consumes a unit of antimatter (which needs to be in your cargo).
+     * @summary Jump Ship
+     * @param {string} shipSymbol 
+     * @param {JumpShipRequest} [jumpShipRequest] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    jumpShip: async (shipSymbol, jumpShipRequest, options2 = {}) => {
+      assertParamExists("jumpShip", "shipSymbol", shipSymbol);
+      const localVarPath = `/my/ships/{shipSymbol}/jump`.replace(`{${"shipSymbol"}}`, encodeURIComponent(String(shipSymbol)));
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+      let baseOptions;
+      if (configuration) {
+        baseOptions = configuration.baseOptions;
+      }
+      const localVarRequestOptions = { method: "POST", ...baseOptions, ...options2 };
+      const localVarHeaderParameter = {};
+      const localVarQueryParameter = {};
+      await setBearerAuthToObject(localVarHeaderParameter, configuration);
+      localVarHeaderParameter["Content-Type"] = "application/json";
+      setSearchParams(localVarUrlObj, localVarQueryParameter);
+      let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+      localVarRequestOptions.headers = { ...localVarHeaderParameter, ...headersFromBaseOptions, ...options2.headers };
+      localVarRequestOptions.data = serializeDataIfNeeded(jumpShipRequest, localVarRequestOptions, configuration);
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions
+      };
+    },
+    /**
+     * Navigate to a target destination. The destination must be located within the same system as the ship. Navigating will consume the necessary fuel and supplies from the ship\'s manifest, and will pay out crew wages from the agent\'s account.  The returned response will detail the route information including the expected time of arrival. Most ship actions are unavailable until the ship has arrived at it\'s destination.  To travel between systems, see the ship\'s warp or jump actions.
+     * @summary Navigate Ship
+     * @param {string} shipSymbol The ship symbol
+     * @param {NavigateShipRequest} [navigateShipRequest] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    navigateShip: async (shipSymbol, navigateShipRequest, options2 = {}) => {
+      assertParamExists("navigateShip", "shipSymbol", shipSymbol);
+      const localVarPath = `/my/ships/{shipSymbol}/navigate`.replace(`{${"shipSymbol"}}`, encodeURIComponent(String(shipSymbol)));
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+      let baseOptions;
+      if (configuration) {
+        baseOptions = configuration.baseOptions;
+      }
+      const localVarRequestOptions = { method: "POST", ...baseOptions, ...options2 };
+      const localVarHeaderParameter = {};
+      const localVarQueryParameter = {};
+      await setBearerAuthToObject(localVarHeaderParameter, configuration);
+      localVarHeaderParameter["Content-Type"] = "application/json";
+      setSearchParams(localVarUrlObj, localVarQueryParameter);
+      let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+      localVarRequestOptions.headers = { ...localVarHeaderParameter, ...headersFromBaseOptions, ...options2.headers };
+      localVarRequestOptions.data = serializeDataIfNeeded(navigateShipRequest, localVarRequestOptions, configuration);
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions
+      };
+    },
+    /**
+     * 
+     * @summary Negotiate Contract
+     * @param {string} shipSymbol 
+     * @param {any} [body] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    negotiateContract: async (shipSymbol, body, options2 = {}) => {
+      assertParamExists("negotiateContract", "shipSymbol", shipSymbol);
+      const localVarPath = `/my/ships/{shipSymbol}/negotiate/contract`.replace(`{${"shipSymbol"}}`, encodeURIComponent(String(shipSymbol)));
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+      let baseOptions;
+      if (configuration) {
+        baseOptions = configuration.baseOptions;
+      }
+      const localVarRequestOptions = { method: "POST", ...baseOptions, ...options2 };
+      const localVarHeaderParameter = {};
+      const localVarQueryParameter = {};
+      await setBearerAuthToObject(localVarHeaderParameter, configuration);
+      localVarHeaderParameter["Content-Type"] = "application/json";
+      setSearchParams(localVarUrlObj, localVarQueryParameter);
+      let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+      localVarRequestOptions.headers = { ...localVarHeaderParameter, ...headersFromBaseOptions, ...options2.headers };
+      localVarRequestOptions.data = serializeDataIfNeeded(body, localVarRequestOptions, configuration);
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions
+      };
+    },
+    /**
+     * Attempt to move your ship into orbit at it\'s current location. The request will only succeed if your ship is capable of moving into orbit at the time of the request.  The endpoint is idempotent - successive calls will succeed even if the ship is already in orbit.
+     * @summary Orbit Ship
+     * @param {string} shipSymbol The symbol of the ship
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    orbitShip: async (shipSymbol, options2 = {}) => {
+      assertParamExists("orbitShip", "shipSymbol", shipSymbol);
+      const localVarPath = `/my/ships/{shipSymbol}/orbit`.replace(`{${"shipSymbol"}}`, encodeURIComponent(String(shipSymbol)));
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+      let baseOptions;
+      if (configuration) {
+        baseOptions = configuration.baseOptions;
+      }
+      const localVarRequestOptions = { method: "POST", ...baseOptions, ...options2 };
+      const localVarHeaderParameter = {};
+      const localVarQueryParameter = {};
+      await setBearerAuthToObject(localVarHeaderParameter, configuration);
+      setSearchParams(localVarUrlObj, localVarQueryParameter);
+      let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+      localVarRequestOptions.headers = { ...localVarHeaderParameter, ...headersFromBaseOptions, ...options2.headers };
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions
+      };
+    },
+    /**
+     * Update the nav data of a ship, such as the flight mode.
+     * @summary Patch Ship Nav
+     * @param {string} shipSymbol The ship symbol
+     * @param {PatchShipNavRequest} [patchShipNavRequest] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    patchShipNav: async (shipSymbol, patchShipNavRequest, options2 = {}) => {
+      assertParamExists("patchShipNav", "shipSymbol", shipSymbol);
+      const localVarPath = `/my/ships/{shipSymbol}/nav`.replace(`{${"shipSymbol"}}`, encodeURIComponent(String(shipSymbol)));
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+      let baseOptions;
+      if (configuration) {
+        baseOptions = configuration.baseOptions;
+      }
+      const localVarRequestOptions = { method: "PATCH", ...baseOptions, ...options2 };
+      const localVarHeaderParameter = {};
+      const localVarQueryParameter = {};
+      await setBearerAuthToObject(localVarHeaderParameter, configuration);
+      localVarHeaderParameter["Content-Type"] = "application/json";
+      setSearchParams(localVarUrlObj, localVarQueryParameter);
+      let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+      localVarRequestOptions.headers = { ...localVarHeaderParameter, ...headersFromBaseOptions, ...options2.headers };
+      localVarRequestOptions.data = serializeDataIfNeeded(patchShipNavRequest, localVarRequestOptions, configuration);
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions
+      };
+    },
+    /**
+     * Purchase cargo.
+     * @summary Purchase Cargo
+     * @param {string} shipSymbol 
+     * @param {PurchaseCargoRequest} [purchaseCargoRequest] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    purchaseCargo: async (shipSymbol, purchaseCargoRequest, options2 = {}) => {
+      assertParamExists("purchaseCargo", "shipSymbol", shipSymbol);
+      const localVarPath = `/my/ships/{shipSymbol}/purchase`.replace(`{${"shipSymbol"}}`, encodeURIComponent(String(shipSymbol)));
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+      let baseOptions;
+      if (configuration) {
+        baseOptions = configuration.baseOptions;
+      }
+      const localVarRequestOptions = { method: "POST", ...baseOptions, ...options2 };
+      const localVarHeaderParameter = {};
+      const localVarQueryParameter = {};
+      await setBearerAuthToObject(localVarHeaderParameter, configuration);
+      localVarHeaderParameter["Content-Type"] = "application/json";
+      setSearchParams(localVarUrlObj, localVarQueryParameter);
+      let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+      localVarRequestOptions.headers = { ...localVarHeaderParameter, ...headersFromBaseOptions, ...options2.headers };
+      localVarRequestOptions.data = serializeDataIfNeeded(purchaseCargoRequest, localVarRequestOptions, configuration);
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions
+      };
+    },
+    /**
+     * Purchase a ship
+     * @summary Purchase Ship
+     * @param {PurchaseShipRequest} [purchaseShipRequest] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    purchaseShip: async (purchaseShipRequest, options2 = {}) => {
+      const localVarPath = `/my/ships`;
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+      let baseOptions;
+      if (configuration) {
+        baseOptions = configuration.baseOptions;
+      }
+      const localVarRequestOptions = { method: "POST", ...baseOptions, ...options2 };
+      const localVarHeaderParameter = {};
+      const localVarQueryParameter = {};
+      await setBearerAuthToObject(localVarHeaderParameter, configuration);
+      localVarHeaderParameter["Content-Type"] = "application/json";
+      setSearchParams(localVarUrlObj, localVarQueryParameter);
+      let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+      localVarRequestOptions.headers = { ...localVarHeaderParameter, ...headersFromBaseOptions, ...options2.headers };
+      localVarRequestOptions.data = serializeDataIfNeeded(purchaseShipRequest, localVarRequestOptions, configuration);
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions
+      };
+    },
+    /**
+     * Refuel your ship from the local market.
+     * @summary Refuel Ship
+     * @param {string} shipSymbol 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    refuelShip: async (shipSymbol, options2 = {}) => {
+      assertParamExists("refuelShip", "shipSymbol", shipSymbol);
+      const localVarPath = `/my/ships/{shipSymbol}/refuel`.replace(`{${"shipSymbol"}}`, encodeURIComponent(String(shipSymbol)));
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+      let baseOptions;
+      if (configuration) {
+        baseOptions = configuration.baseOptions;
+      }
+      const localVarRequestOptions = { method: "POST", ...baseOptions, ...options2 };
+      const localVarHeaderParameter = {};
+      const localVarQueryParameter = {};
+      await setBearerAuthToObject(localVarHeaderParameter, configuration);
+      setSearchParams(localVarUrlObj, localVarQueryParameter);
+      let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+      localVarRequestOptions.headers = { ...localVarHeaderParameter, ...headersFromBaseOptions, ...options2.headers };
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions
+      };
+    },
+    /**
+     * Remove a mount from a ship.
+     * @summary Remove Mount
+     * @param {string} shipSymbol 
+     * @param {RemoveMountRequest} [removeMountRequest] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    removeMount: async (shipSymbol, removeMountRequest, options2 = {}) => {
+      assertParamExists("removeMount", "shipSymbol", shipSymbol);
+      const localVarPath = `/my/ships/{shipSymbol}/mounts/remove`.replace(`{${"shipSymbol"}}`, encodeURIComponent(String(shipSymbol)));
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+      let baseOptions;
+      if (configuration) {
+        baseOptions = configuration.baseOptions;
+      }
+      const localVarRequestOptions = { method: "POST", ...baseOptions, ...options2 };
+      const localVarHeaderParameter = {};
+      const localVarQueryParameter = {};
+      await setBearerAuthToObject(localVarHeaderParameter, configuration);
+      localVarHeaderParameter["Content-Type"] = "application/json";
+      setSearchParams(localVarUrlObj, localVarQueryParameter);
+      let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+      localVarRequestOptions.headers = { ...localVarHeaderParameter, ...headersFromBaseOptions, ...options2.headers };
+      localVarRequestOptions.data = serializeDataIfNeeded(removeMountRequest, localVarRequestOptions, configuration);
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions
+      };
+    },
+    /**
+     * Sell cargo.
+     * @summary Sell Cargo
+     * @param {string} shipSymbol 
+     * @param {SellCargoRequest} [sellCargoRequest] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    sellCargo: async (shipSymbol, sellCargoRequest, options2 = {}) => {
+      assertParamExists("sellCargo", "shipSymbol", shipSymbol);
+      const localVarPath = `/my/ships/{shipSymbol}/sell`.replace(`{${"shipSymbol"}}`, encodeURIComponent(String(shipSymbol)));
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+      let baseOptions;
+      if (configuration) {
+        baseOptions = configuration.baseOptions;
+      }
+      const localVarRequestOptions = { method: "POST", ...baseOptions, ...options2 };
+      const localVarHeaderParameter = {};
+      const localVarQueryParameter = {};
+      await setBearerAuthToObject(localVarHeaderParameter, configuration);
+      localVarHeaderParameter["Content-Type"] = "application/json";
+      setSearchParams(localVarUrlObj, localVarQueryParameter);
+      let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+      localVarRequestOptions.headers = { ...localVarHeaderParameter, ...headersFromBaseOptions, ...options2.headers };
+      localVarRequestOptions.data = serializeDataIfNeeded(sellCargoRequest, localVarRequestOptions, configuration);
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions
+      };
+    },
+    /**
+     * Attempt to refine the raw materials on your ship. The request will only succeed if your ship is capable of refining at the time of the request.
+     * @summary Ship Refine
+     * @param {string} shipSymbol The symbol of the ship
+     * @param {ShipRefineRequest} [shipRefineRequest] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    shipRefine: async (shipSymbol, shipRefineRequest, options2 = {}) => {
+      assertParamExists("shipRefine", "shipSymbol", shipSymbol);
+      const localVarPath = `/my/ships/{shipSymbol}/refine`.replace(`{${"shipSymbol"}}`, encodeURIComponent(String(shipSymbol)));
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+      let baseOptions;
+      if (configuration) {
+        baseOptions = configuration.baseOptions;
+      }
+      const localVarRequestOptions = { method: "POST", ...baseOptions, ...options2 };
+      const localVarHeaderParameter = {};
+      const localVarQueryParameter = {};
+      await setBearerAuthToObject(localVarHeaderParameter, configuration);
+      localVarHeaderParameter["Content-Type"] = "application/json";
+      setSearchParams(localVarUrlObj, localVarQueryParameter);
+      let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+      localVarRequestOptions.headers = { ...localVarHeaderParameter, ...headersFromBaseOptions, ...options2.headers };
+      localVarRequestOptions.data = serializeDataIfNeeded(shipRefineRequest, localVarRequestOptions, configuration);
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions
+      };
+    },
+    /**
+     * Transfer cargo between ships.
+     * @summary Transfer Cargo
+     * @param {string} shipSymbol 
+     * @param {TransferCargoRequest} [transferCargoRequest] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    transferCargo: async (shipSymbol, transferCargoRequest, options2 = {}) => {
+      assertParamExists("transferCargo", "shipSymbol", shipSymbol);
+      const localVarPath = `/my/ships/{shipSymbol}/transfer`.replace(`{${"shipSymbol"}}`, encodeURIComponent(String(shipSymbol)));
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+      let baseOptions;
+      if (configuration) {
+        baseOptions = configuration.baseOptions;
+      }
+      const localVarRequestOptions = { method: "POST", ...baseOptions, ...options2 };
+      const localVarHeaderParameter = {};
+      const localVarQueryParameter = {};
+      await setBearerAuthToObject(localVarHeaderParameter, configuration);
+      localVarHeaderParameter["Content-Type"] = "application/json";
+      setSearchParams(localVarUrlObj, localVarQueryParameter);
+      let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+      localVarRequestOptions.headers = { ...localVarHeaderParameter, ...headersFromBaseOptions, ...options2.headers };
+      localVarRequestOptions.data = serializeDataIfNeeded(transferCargoRequest, localVarRequestOptions, configuration);
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions
+      };
+    },
+    /**
+     * Warp your ship to a target destination in another system. Warping will consume the necessary fuel and supplies from the ship\'s manifest, and will pay out crew wages from the agent\'s account.  The returned response will detail the route information including the expected time of arrival. Most ship actions are unavailable until the ship has arrived at it\'s destination.
+     * @summary Warp Ship
+     * @param {string} shipSymbol 
+     * @param {NavigateShipRequest} [navigateShipRequest] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    warpShip: async (shipSymbol, navigateShipRequest, options2 = {}) => {
+      assertParamExists("warpShip", "shipSymbol", shipSymbol);
+      const localVarPath = `/my/ships/{shipSymbol}/warp`.replace(`{${"shipSymbol"}}`, encodeURIComponent(String(shipSymbol)));
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+      let baseOptions;
+      if (configuration) {
+        baseOptions = configuration.baseOptions;
+      }
+      const localVarRequestOptions = { method: "POST", ...baseOptions, ...options2 };
+      const localVarHeaderParameter = {};
+      const localVarQueryParameter = {};
+      await setBearerAuthToObject(localVarHeaderParameter, configuration);
+      localVarHeaderParameter["Content-Type"] = "application/json";
+      setSearchParams(localVarUrlObj, localVarQueryParameter);
+      let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+      localVarRequestOptions.headers = { ...localVarHeaderParameter, ...headersFromBaseOptions, ...options2.headers };
+      localVarRequestOptions.data = serializeDataIfNeeded(navigateShipRequest, localVarRequestOptions, configuration);
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions
+      };
+    }
+  };
+};
+var FleetApiFp = function(configuration) {
+  const localVarAxiosParamCreator = FleetApiAxiosParamCreator(configuration);
+  return {
+    /**
+     * Command a ship to chart the current waypoint.  Waypoints in the universe are uncharted by default. These locations will not show up in the API until they have been charted by a ship.  Charting a location will record your agent as the one who created the chart.
+     * @summary Create Chart
+     * @param {string} shipSymbol The symbol of the ship
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async createChart(shipSymbol, options2) {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.createChart(shipSymbol, options2);
+      return createRequestFunction(localVarAxiosArgs, axios_default, BASE_PATH, configuration);
+    },
+    /**
+     * Activate your ship\'s sensor arrays to scan for ship information.
+     * @summary Scan Ships
+     * @param {string} shipSymbol 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async createShipShipScan(shipSymbol, options2) {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.createShipShipScan(shipSymbol, options2);
+      return createRequestFunction(localVarAxiosArgs, axios_default, BASE_PATH, configuration);
+    },
+    /**
+     * Activate your ship\'s sensor arrays to scan for system information.
+     * @summary Scan Systems
+     * @param {string} shipSymbol 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async createShipSystemScan(shipSymbol, options2) {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.createShipSystemScan(shipSymbol, options2);
+      return createRequestFunction(localVarAxiosArgs, axios_default, BASE_PATH, configuration);
+    },
+    /**
+     * Activate your ship\'s sensor arrays to scan for waypoint information.
+     * @summary Scan Waypoints
+     * @param {string} shipSymbol 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async createShipWaypointScan(shipSymbol, options2) {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.createShipWaypointScan(shipSymbol, options2);
+      return createRequestFunction(localVarAxiosArgs, axios_default, BASE_PATH, configuration);
+    },
+    /**
+     * If you want to target specific yields for an extraction, you can survey a waypoint, such as an asteroid field, and send the survey in the body of the extract request. Each survey may have multiple deposits, and if a symbol shows up more than once, that indicates a higher chance of extracting that resource.  Your ship will enter a cooldown between consecutive survey requests. Surveys will eventually expire after a period of time. Multiple ships can use the same survey for extraction.
+     * @summary Create Survey
+     * @param {string} shipSymbol The symbol of the ship
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async createSurvey(shipSymbol, options2) {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.createSurvey(shipSymbol, options2);
+      return createRequestFunction(localVarAxiosArgs, axios_default, BASE_PATH, configuration);
+    },
+    /**
+     * Attempt to dock your ship at it\'s current location. Docking will only succeed if the waypoint is a dockable location, and your ship is capable of docking at the time of the request.  The endpoint is idempotent - successive calls will succeed even if the ship is already docked.
+     * @summary Dock Ship
+     * @param {string} shipSymbol The symbol of the ship
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async dockShip(shipSymbol, options2) {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.dockShip(shipSymbol, options2);
+      return createRequestFunction(localVarAxiosArgs, axios_default, BASE_PATH, configuration);
+    },
+    /**
+     * Extract resources from the waypoint into your ship. Send an optional survey as the payload to target specific yields.
+     * @summary Extract Resources
+     * @param {string} shipSymbol The ship symbol
+     * @param {ExtractResourcesRequest} [extractResourcesRequest] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async extractResources(shipSymbol, extractResourcesRequest, options2) {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.extractResources(shipSymbol, extractResourcesRequest, options2);
+      return createRequestFunction(localVarAxiosArgs, axios_default, BASE_PATH, configuration);
+    },
+    /**
+     * Get the mounts on a ship.
+     * @summary Get Mounts
+     * @param {string} shipSymbol 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async getMounts(shipSymbol, options2) {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.getMounts(shipSymbol, options2);
+      return createRequestFunction(localVarAxiosArgs, axios_default, BASE_PATH, configuration);
+    },
+    /**
+     * Retrieve the details of your ship.
+     * @summary Get Ship
+     * @param {string} shipSymbol 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async getMyShip(shipSymbol, options2) {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.getMyShip(shipSymbol, options2);
+      return createRequestFunction(localVarAxiosArgs, axios_default, BASE_PATH, configuration);
+    },
+    /**
+     * Retrieve the cargo of your ship.
+     * @summary Get Ship Cargo
+     * @param {string} shipSymbol The symbol of the ship
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async getMyShipCargo(shipSymbol, options2) {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.getMyShipCargo(shipSymbol, options2);
+      return createRequestFunction(localVarAxiosArgs, axios_default, BASE_PATH, configuration);
+    },
+    /**
+     * Retrieve all of your ships.
+     * @summary List Ships
+     * @param {number} [page] What entry offset to request
+     * @param {number} [limit] How many entries to return per page
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async getMyShips(page, limit, options2) {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.getMyShips(page, limit, options2);
+      return createRequestFunction(localVarAxiosArgs, axios_default, BASE_PATH, configuration);
+    },
+    /**
+     * Retrieve the details of your ship\'s reactor cooldown. Some actions such as activating your jump drive, scanning, or extracting resources taxes your reactor and results in a cooldown.  Your ship cannot perform additional actions until your cooldown has expired. The duration of your cooldown is relative to the power consumption of the related modules or mounts for the action taken.  Response returns a 204 status code (no-content) when the ship has no cooldown.
+     * @summary Get Ship Cooldown
+     * @param {string} shipSymbol 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async getShipCooldown(shipSymbol, options2) {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.getShipCooldown(shipSymbol, options2);
+      return createRequestFunction(localVarAxiosArgs, axios_default, BASE_PATH, configuration);
+    },
+    /**
+     * Get the current nav status of a ship.
+     * @summary Get Ship Nav
+     * @param {string} shipSymbol The ship symbol
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async getShipNav(shipSymbol, options2) {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.getShipNav(shipSymbol, options2);
+      return createRequestFunction(localVarAxiosArgs, axios_default, BASE_PATH, configuration);
+    },
+    /**
+     * Install a mount on a ship.
+     * @summary Install Mount
+     * @param {string} shipSymbol 
+     * @param {InstallMountRequest} [installMountRequest] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async installMount(shipSymbol, installMountRequest, options2) {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.installMount(shipSymbol, installMountRequest, options2);
+      return createRequestFunction(localVarAxiosArgs, axios_default, BASE_PATH, configuration);
+    },
+    /**
+     * Jettison cargo from your ship\'s cargo hold.
+     * @summary Jettison Cargo
+     * @param {string} shipSymbol 
+     * @param {JettisonRequest} [jettisonRequest] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async jettison(shipSymbol, jettisonRequest, options2) {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.jettison(shipSymbol, jettisonRequest, options2);
+      return createRequestFunction(localVarAxiosArgs, axios_default, BASE_PATH, configuration);
+    },
+    /**
+     * Jump your ship instantly to a target system. When used while in orbit or docked to a jump gate waypoint, any ship can use this command. When used elsewhere, jumping requires a jump drive unit and consumes a unit of antimatter (which needs to be in your cargo).
+     * @summary Jump Ship
+     * @param {string} shipSymbol 
+     * @param {JumpShipRequest} [jumpShipRequest] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async jumpShip(shipSymbol, jumpShipRequest, options2) {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.jumpShip(shipSymbol, jumpShipRequest, options2);
+      return createRequestFunction(localVarAxiosArgs, axios_default, BASE_PATH, configuration);
+    },
+    /**
+     * Navigate to a target destination. The destination must be located within the same system as the ship. Navigating will consume the necessary fuel and supplies from the ship\'s manifest, and will pay out crew wages from the agent\'s account.  The returned response will detail the route information including the expected time of arrival. Most ship actions are unavailable until the ship has arrived at it\'s destination.  To travel between systems, see the ship\'s warp or jump actions.
+     * @summary Navigate Ship
+     * @param {string} shipSymbol The ship symbol
+     * @param {NavigateShipRequest} [navigateShipRequest] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async navigateShip(shipSymbol, navigateShipRequest, options2) {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.navigateShip(shipSymbol, navigateShipRequest, options2);
+      return createRequestFunction(localVarAxiosArgs, axios_default, BASE_PATH, configuration);
+    },
+    /**
+     * 
+     * @summary Negotiate Contract
+     * @param {string} shipSymbol 
+     * @param {any} [body] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async negotiateContract(shipSymbol, body, options2) {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.negotiateContract(shipSymbol, body, options2);
+      return createRequestFunction(localVarAxiosArgs, axios_default, BASE_PATH, configuration);
+    },
+    /**
+     * Attempt to move your ship into orbit at it\'s current location. The request will only succeed if your ship is capable of moving into orbit at the time of the request.  The endpoint is idempotent - successive calls will succeed even if the ship is already in orbit.
+     * @summary Orbit Ship
+     * @param {string} shipSymbol The symbol of the ship
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async orbitShip(shipSymbol, options2) {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.orbitShip(shipSymbol, options2);
+      return createRequestFunction(localVarAxiosArgs, axios_default, BASE_PATH, configuration);
+    },
+    /**
+     * Update the nav data of a ship, such as the flight mode.
+     * @summary Patch Ship Nav
+     * @param {string} shipSymbol The ship symbol
+     * @param {PatchShipNavRequest} [patchShipNavRequest] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async patchShipNav(shipSymbol, patchShipNavRequest, options2) {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.patchShipNav(shipSymbol, patchShipNavRequest, options2);
+      return createRequestFunction(localVarAxiosArgs, axios_default, BASE_PATH, configuration);
+    },
+    /**
+     * Purchase cargo.
+     * @summary Purchase Cargo
+     * @param {string} shipSymbol 
+     * @param {PurchaseCargoRequest} [purchaseCargoRequest] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async purchaseCargo(shipSymbol, purchaseCargoRequest, options2) {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.purchaseCargo(shipSymbol, purchaseCargoRequest, options2);
+      return createRequestFunction(localVarAxiosArgs, axios_default, BASE_PATH, configuration);
+    },
+    /**
+     * Purchase a ship
+     * @summary Purchase Ship
+     * @param {PurchaseShipRequest} [purchaseShipRequest] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async purchaseShip(purchaseShipRequest, options2) {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.purchaseShip(purchaseShipRequest, options2);
+      return createRequestFunction(localVarAxiosArgs, axios_default, BASE_PATH, configuration);
+    },
+    /**
+     * Refuel your ship from the local market.
+     * @summary Refuel Ship
+     * @param {string} shipSymbol 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async refuelShip(shipSymbol, options2) {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.refuelShip(shipSymbol, options2);
+      return createRequestFunction(localVarAxiosArgs, axios_default, BASE_PATH, configuration);
+    },
+    /**
+     * Remove a mount from a ship.
+     * @summary Remove Mount
+     * @param {string} shipSymbol 
+     * @param {RemoveMountRequest} [removeMountRequest] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async removeMount(shipSymbol, removeMountRequest, options2) {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.removeMount(shipSymbol, removeMountRequest, options2);
+      return createRequestFunction(localVarAxiosArgs, axios_default, BASE_PATH, configuration);
+    },
+    /**
+     * Sell cargo.
+     * @summary Sell Cargo
+     * @param {string} shipSymbol 
+     * @param {SellCargoRequest} [sellCargoRequest] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async sellCargo(shipSymbol, sellCargoRequest, options2) {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.sellCargo(shipSymbol, sellCargoRequest, options2);
+      return createRequestFunction(localVarAxiosArgs, axios_default, BASE_PATH, configuration);
+    },
+    /**
+     * Attempt to refine the raw materials on your ship. The request will only succeed if your ship is capable of refining at the time of the request.
+     * @summary Ship Refine
+     * @param {string} shipSymbol The symbol of the ship
+     * @param {ShipRefineRequest} [shipRefineRequest] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async shipRefine(shipSymbol, shipRefineRequest, options2) {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.shipRefine(shipSymbol, shipRefineRequest, options2);
+      return createRequestFunction(localVarAxiosArgs, axios_default, BASE_PATH, configuration);
+    },
+    /**
+     * Transfer cargo between ships.
+     * @summary Transfer Cargo
+     * @param {string} shipSymbol 
+     * @param {TransferCargoRequest} [transferCargoRequest] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async transferCargo(shipSymbol, transferCargoRequest, options2) {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.transferCargo(shipSymbol, transferCargoRequest, options2);
+      return createRequestFunction(localVarAxiosArgs, axios_default, BASE_PATH, configuration);
+    },
+    /**
+     * Warp your ship to a target destination in another system. Warping will consume the necessary fuel and supplies from the ship\'s manifest, and will pay out crew wages from the agent\'s account.  The returned response will detail the route information including the expected time of arrival. Most ship actions are unavailable until the ship has arrived at it\'s destination.
+     * @summary Warp Ship
+     * @param {string} shipSymbol 
+     * @param {NavigateShipRequest} [navigateShipRequest] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async warpShip(shipSymbol, navigateShipRequest, options2) {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.warpShip(shipSymbol, navigateShipRequest, options2);
+      return createRequestFunction(localVarAxiosArgs, axios_default, BASE_PATH, configuration);
+    }
+  };
+};
+var FleetApi = class extends BaseAPI {
+  /**
+   * Command a ship to chart the current waypoint.  Waypoints in the universe are uncharted by default. These locations will not show up in the API until they have been charted by a ship.  Charting a location will record your agent as the one who created the chart.
+   * @summary Create Chart
+   * @param {string} shipSymbol The symbol of the ship
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof FleetApi
+   */
+  createChart(shipSymbol, options2) {
+    return FleetApiFp(this.configuration).createChart(shipSymbol, options2).then((request) => request(this.axios, this.basePath));
+  }
+  /**
+   * Activate your ship\'s sensor arrays to scan for ship information.
+   * @summary Scan Ships
+   * @param {string} shipSymbol 
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof FleetApi
+   */
+  createShipShipScan(shipSymbol, options2) {
+    return FleetApiFp(this.configuration).createShipShipScan(shipSymbol, options2).then((request) => request(this.axios, this.basePath));
+  }
+  /**
+   * Activate your ship\'s sensor arrays to scan for system information.
+   * @summary Scan Systems
+   * @param {string} shipSymbol 
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof FleetApi
+   */
+  createShipSystemScan(shipSymbol, options2) {
+    return FleetApiFp(this.configuration).createShipSystemScan(shipSymbol, options2).then((request) => request(this.axios, this.basePath));
+  }
+  /**
+   * Activate your ship\'s sensor arrays to scan for waypoint information.
+   * @summary Scan Waypoints
+   * @param {string} shipSymbol 
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof FleetApi
+   */
+  createShipWaypointScan(shipSymbol, options2) {
+    return FleetApiFp(this.configuration).createShipWaypointScan(shipSymbol, options2).then((request) => request(this.axios, this.basePath));
+  }
+  /**
+   * If you want to target specific yields for an extraction, you can survey a waypoint, such as an asteroid field, and send the survey in the body of the extract request. Each survey may have multiple deposits, and if a symbol shows up more than once, that indicates a higher chance of extracting that resource.  Your ship will enter a cooldown between consecutive survey requests. Surveys will eventually expire after a period of time. Multiple ships can use the same survey for extraction.
+   * @summary Create Survey
+   * @param {string} shipSymbol The symbol of the ship
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof FleetApi
+   */
+  createSurvey(shipSymbol, options2) {
+    return FleetApiFp(this.configuration).createSurvey(shipSymbol, options2).then((request) => request(this.axios, this.basePath));
+  }
+  /**
+   * Attempt to dock your ship at it\'s current location. Docking will only succeed if the waypoint is a dockable location, and your ship is capable of docking at the time of the request.  The endpoint is idempotent - successive calls will succeed even if the ship is already docked.
+   * @summary Dock Ship
+   * @param {string} shipSymbol The symbol of the ship
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof FleetApi
+   */
+  dockShip(shipSymbol, options2) {
+    return FleetApiFp(this.configuration).dockShip(shipSymbol, options2).then((request) => request(this.axios, this.basePath));
+  }
+  /**
+   * Extract resources from the waypoint into your ship. Send an optional survey as the payload to target specific yields.
+   * @summary Extract Resources
+   * @param {string} shipSymbol The ship symbol
+   * @param {ExtractResourcesRequest} [extractResourcesRequest] 
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof FleetApi
+   */
+  extractResources(shipSymbol, extractResourcesRequest, options2) {
+    return FleetApiFp(this.configuration).extractResources(shipSymbol, extractResourcesRequest, options2).then((request) => request(this.axios, this.basePath));
+  }
+  /**
+   * Get the mounts on a ship.
+   * @summary Get Mounts
+   * @param {string} shipSymbol 
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof FleetApi
+   */
+  getMounts(shipSymbol, options2) {
+    return FleetApiFp(this.configuration).getMounts(shipSymbol, options2).then((request) => request(this.axios, this.basePath));
+  }
+  /**
+   * Retrieve the details of your ship.
+   * @summary Get Ship
+   * @param {string} shipSymbol 
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof FleetApi
+   */
+  getMyShip(shipSymbol, options2) {
+    return FleetApiFp(this.configuration).getMyShip(shipSymbol, options2).then((request) => request(this.axios, this.basePath));
+  }
+  /**
+   * Retrieve the cargo of your ship.
+   * @summary Get Ship Cargo
+   * @param {string} shipSymbol The symbol of the ship
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof FleetApi
+   */
+  getMyShipCargo(shipSymbol, options2) {
+    return FleetApiFp(this.configuration).getMyShipCargo(shipSymbol, options2).then((request) => request(this.axios, this.basePath));
+  }
+  /**
+   * Retrieve all of your ships.
+   * @summary List Ships
+   * @param {number} [page] What entry offset to request
+   * @param {number} [limit] How many entries to return per page
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof FleetApi
+   */
+  getMyShips(page, limit, options2) {
+    return FleetApiFp(this.configuration).getMyShips(page, limit, options2).then((request) => request(this.axios, this.basePath));
+  }
+  /**
+   * Retrieve the details of your ship\'s reactor cooldown. Some actions such as activating your jump drive, scanning, or extracting resources taxes your reactor and results in a cooldown.  Your ship cannot perform additional actions until your cooldown has expired. The duration of your cooldown is relative to the power consumption of the related modules or mounts for the action taken.  Response returns a 204 status code (no-content) when the ship has no cooldown.
+   * @summary Get Ship Cooldown
+   * @param {string} shipSymbol 
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof FleetApi
+   */
+  getShipCooldown(shipSymbol, options2) {
+    return FleetApiFp(this.configuration).getShipCooldown(shipSymbol, options2).then((request) => request(this.axios, this.basePath));
+  }
+  /**
+   * Get the current nav status of a ship.
+   * @summary Get Ship Nav
+   * @param {string} shipSymbol The ship symbol
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof FleetApi
+   */
+  getShipNav(shipSymbol, options2) {
+    return FleetApiFp(this.configuration).getShipNav(shipSymbol, options2).then((request) => request(this.axios, this.basePath));
+  }
+  /**
+   * Install a mount on a ship.
+   * @summary Install Mount
+   * @param {string} shipSymbol 
+   * @param {InstallMountRequest} [installMountRequest] 
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof FleetApi
+   */
+  installMount(shipSymbol, installMountRequest, options2) {
+    return FleetApiFp(this.configuration).installMount(shipSymbol, installMountRequest, options2).then((request) => request(this.axios, this.basePath));
+  }
+  /**
+   * Jettison cargo from your ship\'s cargo hold.
+   * @summary Jettison Cargo
+   * @param {string} shipSymbol 
+   * @param {JettisonRequest} [jettisonRequest] 
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof FleetApi
+   */
+  jettison(shipSymbol, jettisonRequest, options2) {
+    return FleetApiFp(this.configuration).jettison(shipSymbol, jettisonRequest, options2).then((request) => request(this.axios, this.basePath));
+  }
+  /**
+   * Jump your ship instantly to a target system. When used while in orbit or docked to a jump gate waypoint, any ship can use this command. When used elsewhere, jumping requires a jump drive unit and consumes a unit of antimatter (which needs to be in your cargo).
+   * @summary Jump Ship
+   * @param {string} shipSymbol 
+   * @param {JumpShipRequest} [jumpShipRequest] 
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof FleetApi
+   */
+  jumpShip(shipSymbol, jumpShipRequest, options2) {
+    return FleetApiFp(this.configuration).jumpShip(shipSymbol, jumpShipRequest, options2).then((request) => request(this.axios, this.basePath));
+  }
+  /**
+   * Navigate to a target destination. The destination must be located within the same system as the ship. Navigating will consume the necessary fuel and supplies from the ship\'s manifest, and will pay out crew wages from the agent\'s account.  The returned response will detail the route information including the expected time of arrival. Most ship actions are unavailable until the ship has arrived at it\'s destination.  To travel between systems, see the ship\'s warp or jump actions.
+   * @summary Navigate Ship
+   * @param {string} shipSymbol The ship symbol
+   * @param {NavigateShipRequest} [navigateShipRequest] 
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof FleetApi
+   */
+  navigateShip(shipSymbol, navigateShipRequest, options2) {
+    return FleetApiFp(this.configuration).navigateShip(shipSymbol, navigateShipRequest, options2).then((request) => request(this.axios, this.basePath));
+  }
+  /**
+   * 
+   * @summary Negotiate Contract
+   * @param {string} shipSymbol 
+   * @param {any} [body] 
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof FleetApi
+   */
+  negotiateContract(shipSymbol, body, options2) {
+    return FleetApiFp(this.configuration).negotiateContract(shipSymbol, body, options2).then((request) => request(this.axios, this.basePath));
+  }
+  /**
+   * Attempt to move your ship into orbit at it\'s current location. The request will only succeed if your ship is capable of moving into orbit at the time of the request.  The endpoint is idempotent - successive calls will succeed even if the ship is already in orbit.
+   * @summary Orbit Ship
+   * @param {string} shipSymbol The symbol of the ship
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof FleetApi
+   */
+  orbitShip(shipSymbol, options2) {
+    return FleetApiFp(this.configuration).orbitShip(shipSymbol, options2).then((request) => request(this.axios, this.basePath));
+  }
+  /**
+   * Update the nav data of a ship, such as the flight mode.
+   * @summary Patch Ship Nav
+   * @param {string} shipSymbol The ship symbol
+   * @param {PatchShipNavRequest} [patchShipNavRequest] 
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof FleetApi
+   */
+  patchShipNav(shipSymbol, patchShipNavRequest, options2) {
+    return FleetApiFp(this.configuration).patchShipNav(shipSymbol, patchShipNavRequest, options2).then((request) => request(this.axios, this.basePath));
+  }
+  /**
+   * Purchase cargo.
+   * @summary Purchase Cargo
+   * @param {string} shipSymbol 
+   * @param {PurchaseCargoRequest} [purchaseCargoRequest] 
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof FleetApi
+   */
+  purchaseCargo(shipSymbol, purchaseCargoRequest, options2) {
+    return FleetApiFp(this.configuration).purchaseCargo(shipSymbol, purchaseCargoRequest, options2).then((request) => request(this.axios, this.basePath));
+  }
+  /**
+   * Purchase a ship
+   * @summary Purchase Ship
+   * @param {PurchaseShipRequest} [purchaseShipRequest] 
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof FleetApi
+   */
+  purchaseShip(purchaseShipRequest, options2) {
+    return FleetApiFp(this.configuration).purchaseShip(purchaseShipRequest, options2).then((request) => request(this.axios, this.basePath));
+  }
+  /**
+   * Refuel your ship from the local market.
+   * @summary Refuel Ship
+   * @param {string} shipSymbol 
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof FleetApi
+   */
+  refuelShip(shipSymbol, options2) {
+    return FleetApiFp(this.configuration).refuelShip(shipSymbol, options2).then((request) => request(this.axios, this.basePath));
+  }
+  /**
+   * Remove a mount from a ship.
+   * @summary Remove Mount
+   * @param {string} shipSymbol 
+   * @param {RemoveMountRequest} [removeMountRequest] 
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof FleetApi
+   */
+  removeMount(shipSymbol, removeMountRequest, options2) {
+    return FleetApiFp(this.configuration).removeMount(shipSymbol, removeMountRequest, options2).then((request) => request(this.axios, this.basePath));
+  }
+  /**
+   * Sell cargo.
+   * @summary Sell Cargo
+   * @param {string} shipSymbol 
+   * @param {SellCargoRequest} [sellCargoRequest] 
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof FleetApi
+   */
+  sellCargo(shipSymbol, sellCargoRequest, options2) {
+    return FleetApiFp(this.configuration).sellCargo(shipSymbol, sellCargoRequest, options2).then((request) => request(this.axios, this.basePath));
+  }
+  /**
+   * Attempt to refine the raw materials on your ship. The request will only succeed if your ship is capable of refining at the time of the request.
+   * @summary Ship Refine
+   * @param {string} shipSymbol The symbol of the ship
+   * @param {ShipRefineRequest} [shipRefineRequest] 
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof FleetApi
+   */
+  shipRefine(shipSymbol, shipRefineRequest, options2) {
+    return FleetApiFp(this.configuration).shipRefine(shipSymbol, shipRefineRequest, options2).then((request) => request(this.axios, this.basePath));
+  }
+  /**
+   * Transfer cargo between ships.
+   * @summary Transfer Cargo
+   * @param {string} shipSymbol 
+   * @param {TransferCargoRequest} [transferCargoRequest] 
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof FleetApi
+   */
+  transferCargo(shipSymbol, transferCargoRequest, options2) {
+    return FleetApiFp(this.configuration).transferCargo(shipSymbol, transferCargoRequest, options2).then((request) => request(this.axios, this.basePath));
+  }
+  /**
+   * Warp your ship to a target destination in another system. Warping will consume the necessary fuel and supplies from the ship\'s manifest, and will pay out crew wages from the agent\'s account.  The returned response will detail the route information including the expected time of arrival. Most ship actions are unavailable until the ship has arrived at it\'s destination.
+   * @summary Warp Ship
+   * @param {string} shipSymbol 
+   * @param {NavigateShipRequest} [navigateShipRequest] 
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   * @memberof FleetApi
+   */
+  warpShip(shipSymbol, navigateShipRequest, options2) {
+    return FleetApiFp(this.configuration).warpShip(shipSymbol, navigateShipRequest, options2).then((request) => request(this.axios, this.basePath));
   }
 };
 
@@ -16720,27 +18213,30 @@ var Configuration = class {
 // src/index.ts
 import_dotenv.default.config();
 var AUTOTRADER_TYPES = {
-  MINER: Miner,
-  EXPLORER: Explorer
+  MINER: new Miner(),
+  EXPLORER: new Explorer()
 };
 var program2 = new Command("autotrader-ts");
 program2.requiredOption("-s --ship <symbol>", "Ship symbol").addOption(
   new Option("-t --type <type>", "Type of AI").choices(Object.keys(AUTOTRADER_TYPES)).makeOptionMandatory()
-).addOption(
-  new Option("-a --token <token>", "Agent token").env("TOKEN").makeOptionMandatory()
-);
+).addOption(new Option("-a --token <token>", "Agent token").env("TOKEN").makeOptionMandatory());
 program2.parse();
 var options = program2.opts();
 var algorithm = AUTOTRADER_TYPES[options.type];
 var config = new Configuration({ accessToken: options.token });
 var agentApi = new AgentsApi(config);
-agentApi.getMyAgent().then((res) => {
+var fleetApi = new FleetApi(config);
+agentApi.getMyAgent().then(async (res) => {
   console.log("Welcome, " + source_default.green(res.data.data.symbol));
   console.log("Current credits: " + source_default.blueBright(res.data.data.credits));
-  console.log(
-    "Executing " + source_default.blue(options.type) + " algorithm for ship " + source_default.green(options.ship)
-  );
-  algorithm(options.ship);
+  console.log("Executing " + source_default.blue(options.type) + " algorithm for ship " + source_default.green(options.ship));
+  const ok = await algorithm.init(options.ship, fleetApi).catch((err) => {
+    console.log(err.response.request.method + " " + source_default.red(err.response.request.path));
+    console.log(err.response.data);
+  });
+  if (ok) {
+    setInterval(() => algorithm.update(), 1e3);
+  }
 }).catch((err) => {
   console.log(source_default.red(err));
 });

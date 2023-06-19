@@ -1,6 +1,10 @@
-import { Miner } from "./miner";
+import { FleetApi } from "../spacetraders-sdk";
 import { Explorer } from "./explorer";
+import { Miner } from "./miner";
 
-type Algorithm = (ship: string) => number;
+interface Algorithm {
+    init: (symbol: string, fleet: FleetApi) => Promise<boolean>;
+    update: () => Promise<void>;
+}
 
-export { Algorithm, Miner, Explorer };
+export { Algorithm, Explorer, Miner };
